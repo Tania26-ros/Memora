@@ -63,3 +63,39 @@ describe('formatBytes', () => {
     expect(formatBytes(5 * 1024 * 1024)).toBe('5 MB')
   })
 })
+
+describe('editar y deshacer', () => {
+  it('edita nombre, ícono y color', async () => {
+    const { updateNotebook } = await import('./db')
+    const nb = await createNotebook({ name: 'Bio', color: '#000', emoji: '📘' }, db)
+    await updateNotebook(nb, { name: ' Biología celular ', color: '#ec4899', emoji: '🦠' }, db)
+    expect(await db.notebooks.get(nb)).toMatchObject({ name: 'Biología celular', color: '#ec4899', emoji: '🦠' })
+  })
+
+  it('deshacer devuelve el cuaderno con sus temas y archivos', async () => {
+    const { snapshotNotebook, restoreSnapshot } = await import('./db')
+    const nb = await createNotebook({ name: 'Física', color: '#000', emoji: '📐' }, db)
+    const tp = await createTopic(nb, 'Cinemática', db)
+    await addFiles(tp, [file('a.txt'), file('b.txt')], 'examen', db)
+
+    const snap = await snapshotNotebook(nb, db)
+    await deleteNotebook(nb, db)
+    expect(await db.files.count()).toBe(0)
+
+    await restoreSnapshot(snap, db)
+    expect((await db.notebooks.get(nb))?.name).toBe('Física')
+    expect((await db.topics.get(tp))?.notebookId).toBe(nb)
+    expect(await db.files.where('topicId').equals(tp).count()).toBe(2)
+  })
+
+  it('deshacer un tema lo devuelve con sus archivos', async () => {
+    const { snapshotTopic, restoreSnapshot } = await import('./db')
+    const nb = await createNotebook({ name: 'X', color: '#000', emoji: '📘' }, db)
+    const tp = await createTopic(nb, 'Uno', db)
+    await addFiles(tp, [file('a.txt')], 'material', db)
+    const snap = await snapshotTopic(tp, db)
+    await deleteTopic(tp, db)
+    await restoreSnapshot(snap, db)
+    expect(await db.files.where('topicId').equals(tp).count()).toBe(1)
+  })
+})

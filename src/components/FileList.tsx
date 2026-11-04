@@ -9,10 +9,13 @@ function FileRow({ file }: { file: StudyFile }) {
   const url = useMemo(() => URL.createObjectURL(file.blob), [file.blob])
   useEffect(() => () => URL.revokeObjectURL(url), [url])
   const isImage = file.mimeType.startsWith('image/')
+  // Para la miniatura usamos la versión pequeña si existe (archivos subidos antes no la tienen).
+  const thumbUrl = useMemo(() => (file.thumb ? URL.createObjectURL(file.thumb) : null), [file.thumb])
+  useEffect(() => () => void (thumbUrl && URL.revokeObjectURL(thumbUrl)), [thumbUrl])
 
   return (
     <li className="file-row">
-      {isImage ? <img className="thumb" src={url} alt="" /> : <span className="file-icon" aria-hidden>{fileIcon(file.mimeType, file.name)}</span>}
+      {isImage ? <img className="thumb" src={thumbUrl ?? url} alt="" loading="lazy" decoding="async" width={44} height={44} /> : <span className="file-icon" aria-hidden>{fileIcon(file.mimeType, file.name)}</span>}
       <div className="file-main">
         <a className="file-name" href={url} target="_blank" rel="noreferrer">
           {file.name}

@@ -1,11 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import ConfirmButton from '../components/ConfirmButton'
 import EditableTitle from '../components/EditableTitle'
 import FileList from '../components/FileList'
 import FileUploader from '../components/FileUploader'
 import StudyPanel from '../components/StudyPanel'
-import { db, deleteTopic } from '../lib/db'
+import { deleteTopicWithUndo } from '../lib/actions'
+import { db } from '../lib/db'
 
 // Página de un tema: subir archivos, verlos y (pronto) estudiar con ellos.
 export default function TopicPage() {
@@ -39,16 +39,15 @@ export default function TopicPage() {
       </nav>
       <div className="page-head">
         <EditableTitle value={topic.name} onSave={(v) => db.topics.update(topicId, { name: v })} />
-        <ConfirmButton
-          label="Borrar tema"
-          confirmText="¿Borrar con sus archivos?"
-          onConfirm={async () => {
-            await deleteTopic(topicId)
+        <button
+          className="btn btn-small btn-ghost"
+          onClick={async () => {
             navigate(`/cuaderno/${topic.notebookId}`)
+            await deleteTopicWithUndo(topic)
           }}
         >
           Borrar
-        </ConfirmButton>
+        </button>
       </div>
 
       <div className="topic-layout">
