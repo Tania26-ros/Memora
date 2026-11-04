@@ -1,4 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
+import type { Question } from './questions'
+import type { ReviewState } from './srs'
 import { makeThumbnail } from './thumbnail'
 
 // ─────────────────────────────────────────────────────────────
@@ -62,6 +64,8 @@ export class MemoraDB extends Dexie {
   notebooks!: EntityTable<Notebook, 'id'>
   topics!: EntityTable<Topic, 'id'>
   files!: EntityTable<StudyFile, 'id'>
+  questions!: EntityTable<Question, 'id'>
+  reviews!: EntityTable<ReviewState, 'questionId'>
 
   constructor(name = 'memora') {
     super(name)
@@ -72,6 +76,12 @@ export class MemoraDB extends Dexie {
       notebooks: '++id, createdAt',
       topics: '++id, notebookId, createdAt',
       files: '++id, topicId, createdAt',
+    })
+    // Versión 2 (etapa 2): preguntas y su estado de repaso.
+    // Las bases de datos que ya existen en los celulares se actualizan solas.
+    this.version(2).stores({
+      questions: '++id, topicId, type, createdAt',
+      reviews: 'questionId, topicId, due',
     })
   }
 }
@@ -131,42 +141,55 @@ export interface Snapshot {
   notebooks: Notebook[]
   topics: Topic[]
   files: StudyFile[]
+  questions: Question[]
+  reviews: ReviewState[]
 }
 
 export async function snapshotNotebook(notebookId: number, database: MemoraDB = db): Promise<Snapshot> {
   const notebook = await database.notebooks.get(notebookId)
   const topics = await database.topics.where('notebookId').equals(notebookId).toArray()
-  const files = await database.files.where('topicId').anyOf(topics.map((t) => t.id)).toArray()
-  return { notebooks: notebook ? [notebook] : [], topics, files }
+  const ids = topics.map((t) => t.id)
+  const files = await database.files.where('topicId').anyOf(ids).toArray()
+  const questions = await database.questions.where('topicId').anyOf(ids).toArray()
+  const reviews = await database.reviews.where('topicId').anyOf(ids).toArray()
+  return { notebooks: notebook ? [notebook] : [], topics, files, questions, reviews }
 }
 
 export async function snapshotTopic(topicId: number, database: MemoraDB = db): Promise<Snapshot> {
   const topic = await database.topics.get(topicId)
   const files = await database.files.where('topicId').equals(topicId).toArray()
-  return { notebooks: [], topics: topic ? [topic] : [], files }
+  const questions = await database.questions.where('topicId').equals(topicId).toArray()
+  const reviews = await database.reviews.where('topicId').equals(topicId).toArray()
+  return { notebooks: [], topics: topic ? [topic] : [], files, questions, reviews }
 }
 
 export async function restoreSnapshot(s: Snapshot, database: MemoraDB = db) {
-  await database.transaction('rw', database.notebooks, database.topics, database.files, async () => {
+  await database.transaction('rw', [database.notebooks, database.topics, database.files, database.questions, database.reviews], async () => {
     await database.notebooks.bulkPut(s.notebooks)
     await database.topics.bulkPut(s.topics)
     await database.files.bulkPut(s.files)
+    await database.questions.bulkPut(s.questions)
+    await database.reviews.bulkPut(s.reviews)
   })
 }
 
 /** Borra un tema y todos sus archivos. La "transacción" asegura que se borre todo o nada. */
 export async function deleteTopic(topicId: number, database: MemoraDB = db) {
-  await database.transaction('rw', database.topics, database.files, async () => {
+  await database.transaction('rw', [database.topics, database.files, database.questions, database.reviews], async () => {
     await database.files.where('topicId').equals(topicId).delete()
+    await database.questions.where('topicId').equals(topicId).delete()
+    await database.reviews.where('topicId').equals(topicId).delete()
     await database.topics.delete(topicId)
   })
 }
 
 /** Borra un cuaderno con todos sus temas y archivos. */
 export async function deleteNotebook(notebookId: number, database: MemoraDB = db) {
-  await database.transaction('rw', database.notebooks, database.topics, database.files, async () => {
+  await database.transaction('rw', [database.notebooks, database.topics, database.files, database.questions, database.reviews], async () => {
     const topicIds = await database.topics.where('notebookId').equals(notebookId).primaryKeys()
     await database.files.where('topicId').anyOf(topicIds).delete()
+    await database.questions.where('topicId').anyOf(topicIds).delete()
+    await database.reviews.where('topicId').anyOf(topicIds).delete()
     await database.topics.where('notebookId').equals(notebookId).delete()
     await database.notebooks.delete(notebookId)
   })

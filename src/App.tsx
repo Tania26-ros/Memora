@@ -9,6 +9,8 @@ import HomePage from './pages/HomePage'
 // así la primera pantalla descarga menos código y aparece antes.
 const NotebookPage = lazy(() => import('./pages/NotebookPage'))
 const TopicPage = lazy(() => import('./pages/TopicPage'))
+const QuestionsPage = lazy(() => import('./pages/QuestionsPage'))
+const PracticePage = lazy(() => import('./pages/PracticePage'))
 
 // Estructura general: encabezado, la página actual y pie.
 // <Routes> elige qué página mostrar según la dirección.
@@ -29,6 +31,8 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/cuaderno/:notebookId" element={<NotebookPage />} />
           <Route path="/tema/:topicId" element={<TopicPage />} />
+          <Route path="/tema/:topicId/preguntas" element={<QuestionsPage />} />
+          <Route path="/tema/:topicId/jugar" element={<PracticePage />} />
           <Route path="*" element={<p className="empty">Esta página no existe. <Link to="/">Volver al inicio</Link></p>} />
         </Routes>
         </Suspense>
