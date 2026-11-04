@@ -1,9 +1,14 @@
+import { lazy, Suspense } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
 import InstallButton from './components/InstallButton'
 import StorageInfo from './components/StorageInfo'
+import UndoToast from './components/UndoToast'
 import HomePage from './pages/HomePage'
-import NotebookPage from './pages/NotebookPage'
-import TopicPage from './pages/TopicPage'
+
+// Las páginas de cuaderno y tema se cargan solo cuando se abren ("lazy"),
+// así la primera pantalla descarga menos código y aparece antes.
+const NotebookPage = lazy(() => import('./pages/NotebookPage'))
+const TopicPage = lazy(() => import('./pages/TopicPage'))
 
 // Estructura general: encabezado, la página actual y pie.
 // <Routes> elige qué página mostrar según la dirección.
@@ -19,17 +24,20 @@ export default function App() {
       </header>
 
       <main className="content">
+        <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/cuaderno/:notebookId" element={<NotebookPage />} />
           <Route path="/tema/:topicId" element={<TopicPage />} />
           <Route path="*" element={<p className="empty">Esta página no existe. <Link to="/">Volver al inicio</Link></p>} />
         </Routes>
+        </Suspense>
       </main>
 
       <footer className="footer">
         <StorageInfo />
       </footer>
+      <UndoToast />
     </div>
   )
 }

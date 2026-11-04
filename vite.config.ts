@@ -29,6 +29,16 @@ export default defineConfig({
         ],
       },
       workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png}'],
+        // Los nombres de emojis (.json, 400 KB) no se descargan al instalar:
+        // se guardan la primera vez que abres el selector y luego funcionan sin internet.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.endsWith('.json'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'memora-datos' },
+          },
+        ],
         // Cualquier ruta (/cuaderno/3, /tema/8...) abre la app aunque no haya internet.
         navigateFallback: '/index.html',
       },

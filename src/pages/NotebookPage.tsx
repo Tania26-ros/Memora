@@ -1,15 +1,16 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import ConfirmButton from '../components/ConfirmButton'
-import EditableTitle from '../components/EditableTitle'
-import { createTopic, db, deleteNotebook } from '../lib/db'
+import EditNotebookDialog from '../components/EditNotebookDialog'
+import { deleteNotebookWithUndo } from '../lib/actions'
+import { createTopic, db } from '../lib/db'
 
 // Página de un cuaderno: sus temas.
 export default function NotebookPage() {
   const notebookId = Number(useParams().notebookId)
   const navigate = useNavigate()
   const [name, setName] = useState('')
+  const [editing, setEditing] = useState(false)
 
   // "null" significa que ya buscamos y no existe; "undefined", que aún está cargando.
   const notebook = useLiveQuery(async () => (await db.notebooks.get(notebookId)) ?? null, [notebookId])
@@ -17,7 +18,9 @@ export default function NotebookPage() {
   const fileCounts = useLiveQuery(async () => {
     const ids = (topics ?? []).map((t) => t.id)
     const counts = new Map<number, number>()
-    await db.files.where('topicId').anyOf(ids).each((f) => counts.set(f.topicId, (counts.get(f.topicId) ?? 0) + 1))
+    // .keys() lee solo el índice (el topicId de cada archivo), sin cargar los archivos.
+    const keys = await db.files.where('topicId').anyOf(ids).keys()
+    for (const k of keys) counts.set(k as number, (counts.get(k as number) ?? 0) + 1)
     return counts
   }, [topics])
 
@@ -38,17 +41,21 @@ export default function NotebookPage() {
         <span className="notebook-emoji" aria-hidden>
           {notebook.emoji}
         </span>
-        <EditableTitle value={notebook.name} onSave={(v) => db.notebooks.update(notebookId, { name: v })} />
-        <ConfirmButton
-          label="Borrar cuaderno"
-          confirmText="¿Borrar con todos sus temas?"
-          onConfirm={async () => {
-            await deleteNotebook(notebookId)
-            navigate('/')
-          }}
-        >
-          Borrar
-        </ConfirmButton>
+        <h1 className="page-title">{notebook.name}</h1>
+        <div className="head-actions">
+          <button className="btn btn-small btn-ghost" onClick={() => setEditing(true)}>
+            Editar
+          </button>
+          <button
+            className="btn btn-small btn-ghost"
+            onClick={async () => {
+              navigate('/')
+              await deleteNotebookWithUndo(notebook)
+            }}
+          >
+            Borrar
+          </button>
+        </div>
       </div>
 
       <form
@@ -86,6 +93,7 @@ export default function NotebookPage() {
           })}
         </ol>
       )}
+      {editing && <EditNotebookDialog notebook={notebook} onClose={() => setEditing(false)} />}
     </section>
   )
 }
