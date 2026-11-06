@@ -13,10 +13,7 @@ const OPTIONS: { group: string; items: { label: string; stage: number }[] }[] = 
   {
     group: 'Juegos',
     items: [
-      { label: 'Opción múltiple', stage: 2 },
-      { label: 'Verdadero o falso', stage: 2 },
-      { label: 'Unir columnas', stage: 2 },
-      { label: 'Completar espacios', stage: 2 },
+      { label: 'Crear preguntas desde tus archivos', stage: 5 },
       { label: 'Ordenar y clasificar', stage: 2 },
     ],
   },
@@ -33,7 +30,7 @@ export default function StudyPanel() {
   return (
     <aside className="card panel" aria-label="Opciones de estudio">
       <h2>Opciones de estudio</h2>
-      <p className="muted">Se irán activando en las próximas etapas.</p>
+      <p className="muted">Los juegos con preguntas escritas a mano ya funcionan arriba. Lo demás se irá activando en las próximas etapas.</p>
       {OPTIONS.map((g) => (
         <fieldset key={g.group} className="panel-group" disabled>
           <legend>{g.group}</legend>
