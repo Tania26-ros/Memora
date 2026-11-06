@@ -11,6 +11,8 @@ export interface Settings {
   doseSize: number
   repeatUntil: number
   shuffle: boolean
+  /** Mostrar el botón «Ver pista» en las preguntas que tienen pista. */
+  hints: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -22,6 +24,7 @@ export const DEFAULT_SETTINGS: Settings = {
   doseSize: 10,
   repeatUntil: 2,
   shuffle: false,
+  hints: true,
 }
 
 /** Opciones de tiempo por pregunta: de 5 segundos a 5 minutos. */

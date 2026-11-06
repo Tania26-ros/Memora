@@ -272,7 +272,9 @@ a { color: var(--primary); }
 
 .options { display: grid; gap: 0.5rem; }
 .opt { position: relative; display: flex; align-items: stretch; border: 2px solid var(--border); border-radius: 12px; background: var(--surface); transition: border-color 0.15s, background 0.15s, opacity 0.15s; }
-.opt-main { flex: 1; display: flex; align-items: center; gap: 0.75rem; min-height: 52px; padding: 0.55rem 0.75rem; border: 0; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; border-radius: 10px; }
+.opt-main { flex: 1; display: flex; align-items: center; gap: 0.75rem; min-height: 52px; padding: 0.55rem 0.75rem; color: var(--text); font: inherit; text-align: left; cursor: pointer; border-radius: 10px; }
+/* Dentro de una alternativa con ✕ el borde lo pone el contenedor; un botón .opt suelto tiene el suyo. */
+.opt > .opt-main { border: 0; background: transparent; }
 button.opt { min-height: 52px; padding: 0.55rem 0.75rem; color: var(--text); font: inherit; cursor: pointer; }
 .opt:not(.opt-correct):not(.opt-wrong):hover { border-color: var(--primary); }
 .opt-text { overflow-wrap: anywhere; }
@@ -321,3 +323,34 @@ button.opt { min-height: 52px; padding: 0.55rem 0.75rem; color: var(--text); fon
 .results-big { font-size: 3rem; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; line-height: 1; }
 .failed-list { text-align: left; margin: 0.25rem 0 0; padding-left: 1.1rem; }
 .results-actions { display: grid; gap: 0.5rem; }
+
+/* ── Etapa 2, parte 2: ordenar, clasificar, pistas, pegar ── */
+.group-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 0.5rem; }
+.form-ok { margin: 0; padding: 0.5rem 0.75rem; border-radius: 10px; background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+.opt-picked { border-color: var(--primary); background: var(--primary-soft); }
+.opt-picked .letter { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+.hint-btn { width: auto; display: inline-flex; margin-bottom: 0.75rem; }
+.hint-box { margin: 0 0 0.75rem; padding: 0.5rem 0.75rem; border-radius: 10px; background: var(--surface-2); border-left: 4px solid #f59e0b; }
+.classify-item { margin: 0.25rem 0 0.75rem; padding: 0.9rem; border-radius: 12px; background: var(--primary-soft); font-size: 1.15rem; font-weight: 700; text-align: center; }
+.classify-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.5rem; margin-bottom: 0.5rem; }
+.classify-groups .opt { justify-content: center; font-weight: 600; }
+.classify-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.5rem; margin-top: 0.75rem; }
+.classify-col { padding: 0.5rem 0.65rem; border: 1px dashed var(--border); border-radius: 10px; min-height: 3rem; font-size: 0.9rem; }
+.classify-col ul { margin: 0.25rem 0 0; padding: 0; list-style: none; }
+.classify-col li.ok { color: var(--ok); }
+.classify-col li.bad { color: var(--fail); }
+.steps { margin: 0.75rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.4rem; }
+.steps li { display: flex; gap: 0.6rem; align-items: center; font-size: 0.92rem; }
+.steps .step-dot { flex: none; width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; font-size: 0.8rem; font-weight: 700; border: 2px solid var(--border); color: var(--muted); }
+.steps .step-done .step-dot { background: var(--ok); border-color: var(--ok); color: #fff; }
+.steps .step-now { font-weight: 700; }
+.steps .step-now .step-dot { border-color: var(--primary); color: var(--primary); }
+.import-preview { display: grid; gap: 0.5rem; margin: 0.75rem 0; padding: 0; list-style: none; }
+.import-item { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.import-item.has-problem { border-color: #f59e0b; }
+.import-item input[type='checkbox'] { margin-top: 0.3rem; width: 1.1rem; height: 1.1rem; flex: none; }
+.import-item p { margin: 0.15rem 0 0; }
+.import-problem { color: #b45309; font-weight: 600; font-size: 0.88rem; }
+.tip { padding: 0.65rem 0.8rem; border-radius: 12px; background: var(--surface-2); font-size: 0.9rem; }
+.tip summary { cursor: pointer; font-weight: 600; }
+.tip pre { white-space: pre-wrap; font-size: 0.85rem; margin: 0.5rem 0 0; }

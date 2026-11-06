@@ -24,16 +24,21 @@ export default function QuestionsPage() {
       </nav>
       <div className="page-head">
         <h1 className="page-title">Preguntas</h1>
-        <button className="btn" onClick={() => setEditing('nueva')}>
-          + Nueva pregunta
-        </button>
+        <div className="card-actions">
+          <Link className="btn btn-ghost" to={`/tema/${topicId}/pegar`}>
+            📋 Pegar preguntas
+          </Link>
+          <button className="btn" onClick={() => setEditing('nueva')}>
+            + Nueva pregunta
+          </button>
+        </div>
       </div>
       <p className="lead">
-        {questions.length} {questions.length === 1 ? 'pregunta' : 'preguntas'}. En la etapa 5 Memora también las creará sola a partir de tus archivos.
+        {questions.length} {questions.length === 1 ? 'pregunta' : 'preguntas'}. Escríbelas una por una o pega un cuestionario completo. (Con Memora Premium, más adelante, también se podrán crear solas.)
       </p>
 
       {questions.length === 0 ? (
-        <p className="empty">Escribe tu primera pregunta con «+ Nueva pregunta».</p>
+        <p className="empty">Escribe tu primera pregunta con «+ Nueva pregunta», o usa «Pegar preguntas» si ya tienes un examen o cuestionario.</p>
       ) : (
         <ol className="q-list">
           {questions.map((q, i) => {

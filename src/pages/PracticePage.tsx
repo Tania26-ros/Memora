@@ -250,6 +250,10 @@ function Setup({
             <input type="checkbox" checked={s.vibration} onChange={(e) => updateSettings({ vibration: e.target.checked })} />
             Vibración
           </label>
+          <label className="check">
+            <input type="checkbox" checked={s.hints} onChange={(e) => updateSettings({ hints: e.target.checked })} />
+            Pistas
+          </label>
         </div>
       </fieldset>
 
@@ -305,6 +309,7 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
   const [result, setResult] = useState<null | 'ok' | 'fail' | 'timeout'>(null)
   const [round, setRound] = useState(0) // cambia en cada pregunta mostrada, para reiniciar el temporizador
   const [streak, setStreak] = useState(0)
+  const [hintRound, setHintRound] = useState(-1) // en qué ronda se pidió la pista
 
   const qid = currentQid(session)
   const q = qid !== undefined ? byId.get(qid) : undefined
@@ -361,6 +366,15 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
           {seenBefore && <span className="badge">Otra vez</span>}
         </div>
         <h2 className="q-prompt">{q.prompt}</h2>
+        {s.hints && q.hint && !result && (
+          hintRound === round ? (
+            <p className="hint-box">💡 {q.hint}</p>
+          ) : (
+            <button className="btn btn-small btn-ghost hint-btn" onClick={() => setHintRound(round)}>
+              💡 Ver pista
+            </button>
+          )
+        )}
         {s.timerOn && <TimerBar key={round} seconds={s.timerSeconds} running={!result} onExpire={() => respond(false, true)} />}
         <Player key={round} q={q} answered={!!result} mix={mix} onAnswer={(ok) => respond(ok)} />
       </article>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
-  LETTERS, checkCloze, checkMatch, clozeSegments, shuffle,
-  type ClozeQuestion, type MatchQuestion, type McqQuestion, type OpenQuestion, type Question, type TfQuestion,
+  LETTERS, checkClassify, checkCloze, checkMatch, checkOrder, classifyItems, clozeSegments, shuffle,
+  type ClassifyQuestion, type ClozeQuestion, type MatchQuestion, type McqQuestion, type OpenQuestion, type OrderQuestion, type Question, type TfQuestion,
 } from '../../lib/questions'
 
 // Un componente por tipo de pregunta. Todos reciben lo mismo:
@@ -27,7 +27,117 @@ export default function Player({ q, ...rest }: Omit<Props<Question>, 'q'> & { q:
       return <ClozePlayer q={q} {...rest} />
     case 'open':
       return <OpenPlayer q={q} {...rest} />
+    case 'order':
+      return <OrderPlayer q={q} {...rest} />
+    case 'classify':
+      return <ClassifyPlayer q={q} {...rest} />
   }
+}
+
+/** Mezcla posiciones evitando que salgan justo en el orden correcto. */
+function mixed(n: number) {
+  let o = shuffle([...Array(n).keys()])
+  if (n > 1 && o.every((v, i) => v === i)) o = [...o.slice(1), o[0]]
+  return o
+}
+
+function OrderPlayer({ q, answered, onAnswer }: Props<OrderQuestion>) {
+  const shown = useMemo(() => mixed(q.items.length), [q])
+  const [picked, setPicked] = useState<number[]>([])
+
+  const tap = (i: number) => {
+    if (answered) return
+    // Tocar uno ya elegido lo quita (y los que vinieron después), para corregir.
+    const pos = picked.indexOf(i)
+    if (pos !== -1) return setPicked(picked.slice(0, pos))
+    const next = [...picked, i]
+    setPicked(next)
+    if (next.length === q.items.length) onAnswer(checkOrder(q, next))
+  }
+
+  return (
+    <div>
+      <p className="muted hint">Toca los pasos en orden: primero el 1, luego el 2… Toca uno elegido para quitarlo.</p>
+      <div className="options" role="group" aria-label="Pasos para ordenar">
+        {shown.map((i) => {
+          const pos = picked.indexOf(i)
+          const state = answered ? (pos !== -1 && q.items[picked[pos]] === q.items[pos] ? 'opt-correct' : 'opt-wrong') : pos !== -1 ? 'opt-picked' : ''
+          return (
+            <button key={i} className={`opt opt-main ${state}`} disabled={answered} onClick={() => tap(i)} aria-label={pos !== -1 ? `${q.items[i]}, puesto ${pos + 1}` : q.items[i]}>
+              <span className="letter">{pos !== -1 ? pos + 1 : '·'}</span>
+              <span className="opt-text">{q.items[i]}</span>
+            </button>
+          )
+        })}
+      </div>
+      {answered && (
+        <ol className="match-solution">
+          {q.items.map((it, i) => (
+            <li key={i}>{it}</li>
+          ))}
+        </ol>
+      )}
+    </div>
+  )
+}
+
+function ClassifyPlayer({ q, answered, onAnswer }: Props<ClassifyQuestion>) {
+  const items = useMemo(() => classifyItems(q), [q])
+  const order = useMemo(() => mixed(items.length), [items])
+  // picked[i] = grupo elegido para items[i]
+  const [picked, setPicked] = useState<(number | null)[]>(() => items.map(() => null))
+  const step = picked.filter((p) => p !== null).length
+  const current = order[step]
+
+  const choose = (group: number) => {
+    if (answered || current === undefined) return
+    const next = [...picked]
+    next[current] = group
+    setPicked(next)
+    if (next.every((p) => p !== null)) onAnswer(checkClassify(q, next as number[]))
+  }
+
+  return (
+    <div>
+      {!answered && current !== undefined && (
+        <>
+          <p className="muted hint">
+            Elemento {step + 1} de {items.length}. ¿En qué grupo va?
+          </p>
+          <p className="classify-item">{items[current].text}</p>
+          <div className="classify-groups" role="group" aria-label="Grupos">
+            {q.groups.map((g, gi) => (
+              <button key={gi} className="opt opt-main" onClick={() => choose(gi)}>
+                {g.name}
+              </button>
+            ))}
+          </div>
+          {step > 0 && (
+            <button className="btn btn-small btn-ghost" onClick={() => setPicked(picked.map((p, i) => (i === order[step - 1] ? null : p)))}>
+              ↶ Cambiar el anterior
+            </button>
+          )}
+        </>
+      )}
+      <div className="classify-board">
+        {q.groups.map((g, gi) => (
+          <div key={gi} className="classify-col">
+            <strong>{g.name}</strong>
+            <ul>
+              {items.map((it, i) =>
+                picked[i] === gi ? (
+                  <li key={i} className={answered ? (it.group === gi ? 'ok' : 'bad') : ''}>
+                    {answered && (it.group === gi ? '✓ ' : '✗ ')}
+                    {it.text}
+                  </li>
+                ) : null,
+              )}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function McqPlayer({ q, answered, mix, onAnswer }: Props<McqQuestion>) {
