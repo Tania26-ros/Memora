@@ -25,12 +25,35 @@ export default function QuestionEditor({ topicId, question, onClose }: { topicId
   const [answer, setAnswer] = useState(question?.type === 'open' ? question.answer : '')
   const [clozeDraft, setClozeDraft] = useState(question?.type === 'cloze' ? clozeToDraft(question) : '')
   const [distractors, setDistractors] = useState<string[]>(question?.type === 'cloze' ? question.blanks.map((b) => b.distractors.join(', ')) : [])
+  const [orderDraft, setOrderDraft] = useState(question?.type === 'order' ? question.items.join('\n') : '')
+  const [groups, setGroups] = useState(question?.type === 'classify' ? question.groups.map((g) => ({ name: g.name, items: g.items.join(', ') })) : [{ name: '', items: '' }, { name: '', items: '' }])
+  const [hint, setHint] = useState(question?.hint ?? '')
   const [error, setError] = useState<string | null>(null)
+  const [savedCount, setSavedCount] = useState(0)
+  const promptRef = useRef<HTMLTextAreaElement>(null)
+
+  // "Guardar y otra": limpia los campos pero mantiene el tipo y la dificultad,
+  // para escribir varias preguntas seguidas sin abrir y cerrar la ventana.
+  const reset = () => {
+    setPrompt('')
+    setExplanation('')
+    setHint('')
+    setOptions(['', '', '', ''])
+    setCorrect(0)
+    setTf(true)
+    setPairs([{ left: '', right: '' }, { left: '', right: '' }, { left: '', right: '' }])
+    setAnswer('')
+    setClozeDraft('')
+    setDistractors([])
+    setOrderDraft('')
+    setGroups(groups.map((g) => ({ name: g.name, items: '' })))
+    setError(null)
+  }
 
   const cloze = parseClozeDraft(clozeDraft)
 
   const build = (): NewQuestion => {
-    const common = { topicId, difficulty, explanation: explanation.trim() || undefined, starred: question?.starred, createdAt: question?.createdAt ?? 0 }
+    const common = { topicId, difficulty, explanation: explanation.trim() || undefined, hint: hint.trim() || undefined, starred: question?.starred, createdAt: question?.createdAt ?? 0 }
     switch (type) {
       case 'mcq': {
         // Quitamos alternativas vacías y ajustamos la posición de la correcta.
@@ -51,18 +74,33 @@ export default function QuestionEditor({ topicId, question, onClose }: { topicId
           text: cloze.text,
           blanks: cloze.answers.map((a, i) => ({ answer: a, distractors: (distractors[i] ?? '').split(',').map((d) => d.trim()).filter(Boolean) })),
         }
+      case 'order':
+        return { ...common, type, prompt: prompt.trim() || 'Ordena los pasos', items: orderDraft.split('\n').map((l) => l.trim()).filter(Boolean) }
+      case 'classify':
+        return {
+          ...common,
+          type,
+          prompt: prompt.trim() || 'Clasifica cada elemento en su grupo',
+          groups: groups.map((g) => ({ name: g.name.trim(), items: g.items.split(',').map((it) => it.trim()).filter(Boolean) })).filter((g) => g.name || g.items.length),
+        }
     }
   }
 
-  const save = async () => {
+  const save = async (another = false) => {
     const q = build()
     if (!question) q.createdAt = nowMs()
     const problem = validateQuestion(q)
     if (problem) return setError(problem)
     if (question) await db.questions.put({ ...q, id: question.id } as Question)
     else await db.questions.add(q as Question)
-    ref.current?.close()
+    if (another) {
+      reset()
+      setSavedCount((n) => n + 1)
+      promptRef.current?.focus()
+    } else ref.current?.close()
   }
+
+  const optionalPrompt = type === 'match' || type === 'order' || type === 'classify'
 
   return (
     <dialog ref={ref} className="dialog dialog-wide" onClose={onClose} aria-labelledby="q-editor-title">
@@ -71,7 +109,7 @@ export default function QuestionEditor({ topicId, question, onClose }: { topicId
         className="q-form"
         onSubmit={(e) => {
           e.preventDefault()
-          void save()
+          void save(false)
         }}
       >
         {!question && (
@@ -89,8 +127,8 @@ export default function QuestionEditor({ topicId, question, onClose }: { topicId
 
         {type !== 'cloze' && (
           <label className="field" htmlFor="q-prompt">
-            <span>{type === 'tf' ? 'Afirmación' : type === 'match' ? 'Instrucción (opcional)' : 'Pregunta'}</span>
-            <textarea id="q-prompt" className="input textarea" rows={2} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={type === 'tf' ? 'Ej.: La mitocondria produce ATP.' : 'Ej.: ¿Qué orgánulo produce energía?'} />
+            <span>{type === 'tf' ? 'Afirmación' : optionalPrompt ? 'Instrucción (opcional)' : 'Pregunta'}</span>
+            <textarea ref={promptRef} id="q-prompt" className="input textarea" rows={2} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={type === 'tf' ? 'Ej.: La mitocondria produce ATP.' : type === 'order' ? 'Ej.: Ordena las fases de la mitosis' : type === 'classify' ? 'Ej.: ¿Animal o vegetal?' : type === 'match' ? 'Ej.: Une cada orgánulo con su función' : 'Ej.: ¿Qué orgánulo produce energía?'} />
           </label>
         )}
 
@@ -168,6 +206,30 @@ export default function QuestionEditor({ topicId, question, onClose }: { topicId
           </>
         )}
 
+        {type === 'order' && (
+          <label className="field" htmlFor="q-order">
+            <span>Pasos en el orden correcto, uno por línea (Memora los mezcla al jugar)</span>
+            <textarea id="q-order" className="input textarea" rows={5} value={orderDraft} onChange={(e) => setOrderDraft(e.target.value)} placeholder={'Profase\nMetafase\nAnafase\nTelofase'} />
+          </label>
+        )}
+
+        {type === 'classify' && (
+          <fieldset className="field plain">
+            <legend>Grupos y sus elementos (separados por comas)</legend>
+            {groups.map((g, i) => (
+              <div key={i} className="group-row">
+                <input className="input" value={g.name} placeholder={`Grupo ${i + 1}`} aria-label={`Nombre del grupo ${i + 1}`} onChange={(e) => setGroups(groups.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+                <input className="input" value={g.items} placeholder="Elementos: a, b, c" aria-label={`Elementos del grupo ${i + 1}`} onChange={(e) => setGroups(groups.map((x, j) => (j === i ? { ...x, items: e.target.value } : x)))} />
+              </div>
+            ))}
+            {groups.length < 4 && (
+              <button type="button" className="btn btn-small btn-ghost" onClick={() => setGroups([...groups, { name: '', items: '' }])}>
+                + Grupo
+              </button>
+            )}
+          </fieldset>
+        )}
+
         <div className="field">
           <span>Dificultad</span>
           <div className="seg" role="radiogroup">
@@ -184,15 +246,30 @@ export default function QuestionEditor({ topicId, question, onClose }: { topicId
           <textarea id="q-expl" className="input textarea" rows={2} value={explanation} onChange={(e) => setExplanation(e.target.value)} />
         </label>
 
+        <label className="field" htmlFor="q-hint">
+          <span>Pista (opcional): una ayuda que se puede pedir mientras se juega</span>
+          <input id="q-hint" className="input" value={hint} onChange={(e) => setHint(e.target.value)} placeholder="Ej.: Piensa en la «central de energía» de la célula." />
+        </label>
+
         {error && (
           <p className="form-error" role="alert">
             {error}
           </p>
         )}
+        {savedCount > 0 && !error && (
+          <p className="form-ok" role="status">
+            ✓ {savedCount === 1 ? 'Pregunta guardada' : `${savedCount} preguntas guardadas`}. Escribe la siguiente.
+          </p>
+        )}
         <div className="form-actions">
           <button type="button" className="btn btn-ghost" onClick={() => ref.current?.close()}>
-            Cancelar
+            {savedCount > 0 ? 'Terminar' : 'Cancelar'}
           </button>
+          {!question && (
+            <button type="button" className="btn btn-ghost" onClick={() => void save(true)}>
+              Guardar y otra
+            </button>
+          )}
           <button className="btn">{question ? 'Guardar' : 'Añadir pregunta'}</button>
         </div>
       </form>

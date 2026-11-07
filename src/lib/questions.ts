@@ -16,8 +16,10 @@ interface Base {
   id: number
   topicId: number
   difficulty: Difficulty
-  /** Por qué la respuesta es la correcta (y las otras no). */
+  /** Por qué la respuesta es la correcta (y las otras no). Se muestra al responder. */
   explanation?: string
+  /** Pista que se puede pedir mientras se juega (si las pistas están activadas). */
+  hint?: string
   starred?: boolean
   createdAt: number
 }
@@ -56,16 +58,32 @@ export interface ClozeQuestion extends Base {
   blanks: { answer: string; distractors: string[] }[]
 }
 
-export type Question = McqQuestion | TfQuestion | MatchQuestion | OpenQuestion | ClozeQuestion
+/** Ordenar pasos o sucesos. items está guardado en el orden correcto. */
+export interface OrderQuestion extends Base {
+  type: 'order'
+  prompt: string
+  items: string[]
+}
+
+/** Clasificar: cada elemento va en uno de los grupos. */
+export interface ClassifyQuestion extends Base {
+  type: 'classify'
+  prompt: string
+  groups: { name: string; items: string[] }[]
+}
+
+export type Question = McqQuestion | TfQuestion | MatchQuestion | OpenQuestion | ClozeQuestion | OrderQuestion | ClassifyQuestion
 export type QuestionType = Question['type']
 /** Una pregunta antes de guardarla (todavía sin id). */
-export type NewQuestion = Omit<McqQuestion, 'id'> | Omit<TfQuestion, 'id'> | Omit<MatchQuestion, 'id'> | Omit<OpenQuestion, 'id'> | Omit<ClozeQuestion, 'id'>
+export type NewQuestion = Question extends infer Q ? (Q extends Question ? Omit<Q, 'id'> : never) : never
 
 export const QUESTION_TYPES: { value: QuestionType; label: string; hint: string }[] = [
   { value: 'mcq', label: 'Opción múltiple', hint: 'Marcar una alternativa' },
   { value: 'tf', label: 'Verdadero o falso', hint: 'Decidir si la frase es cierta' },
   { value: 'match', label: 'Unir columnas', hint: 'Emparejar conceptos' },
   { value: 'cloze', label: 'Completar espacios', hint: 'Elegir la palabra que falta' },
+  { value: 'order', label: 'Ordenar', hint: 'Poner pasos o sucesos en orden' },
+  { value: 'classify', label: 'Clasificar', hint: 'Llevar cada elemento a su grupo' },
   { value: 'open', label: 'Pregunta abierta', hint: 'Responder y comparar' },
 ]
 
@@ -123,6 +141,23 @@ export function checkCloze(q: ClozeQuestion, picked: string[]) {
   return q.blanks.every((b, i) => normalize(picked[i] ?? '') === normalize(b.answer))
 }
 
+/** picked = posiciones (en items) en el orden que eligió el estudiante. */
+export function checkOrder(q: OrderQuestion, picked: number[]) {
+  // Se compara el texto, por si dos pasos se escriben igual.
+  return picked.length === q.items.length && picked.every((p, i) => normalize(q.items[p]) === normalize(q.items[i]))
+}
+
+/** Lista plana de elementos a clasificar, con el grupo correcto de cada uno. */
+export function classifyItems(q: Pick<ClassifyQuestion, 'groups'>): { text: string; group: number }[] {
+  return q.groups.flatMap((g, group) => g.items.map((text) => ({ text, group })))
+}
+
+/** picked[i] = grupo elegido para el elemento i de classifyItems(q). */
+export function checkClassify(q: ClassifyQuestion, picked: number[]) {
+  const items = classifyItems(q)
+  return picked.length === items.length && items.every((it, i) => picked[i] === it.group)
+}
+
 export function normalize(s: string) {
   return s.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
 }
@@ -140,6 +175,10 @@ export function correctAnswerText(q: Question): string {
       return q.answer
     case 'cloze':
       return q.blanks.map((b) => b.answer).join(' · ')
+    case 'order':
+      return q.items.map((it, i) => `${i + 1}. ${it}`).join(' · ')
+    case 'classify':
+      return q.groups.map((g) => `${g.name}: ${g.items.join(', ')}`).join(' · ')
   }
 }
 
@@ -163,6 +202,16 @@ export function validateQuestion(q: NewQuestion): string | null {
       if (q.blanks.length > 3) return 'Usa como máximo 3 espacios por párrafo.'
       if (q.blanks.some((b) => b.distractors.filter((d) => d.trim()).length < 1)) return 'Escribe al menos 1 alternativa incorrecta para cada espacio.'
       return null
+    case 'order':
+      if (q.items.filter((it) => it.trim()).length < 3) return 'Escribe al menos 3 pasos para ordenar.'
+      return null
+    case 'classify': {
+      const groups = q.groups.filter((g) => g.name.trim())
+      if (groups.length < 2) return 'Escribe al menos 2 grupos.'
+      if (groups.some((g) => g.items.filter((it) => it.trim()).length < 1)) return 'Cada grupo necesita al menos 1 elemento.'
+      if (classifyItems(q).length > 16) return 'Usa como máximo 16 elementos en total.'
+      return null
+    }
   }
 }
 

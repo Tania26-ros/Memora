@@ -1,8 +1,8 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
 import {
-  checkCloze, checkMatch, checkMcq, clozeSegments, clozeToDraft, parseClozeDraft, shuffle, validateQuestion,
-  type ClozeQuestion, type MatchQuestion, type McqQuestion,
+  checkClassify, checkCloze, checkMatch, checkMcq, checkOrder, classifyItems, clozeSegments, clozeToDraft, correctAnswerText, parseClozeDraft, shuffle, validateQuestion,
+  type ClassifyQuestion, type ClozeQuestion, type MatchQuestion, type McqQuestion, type OrderQuestion,
 } from './questions'
 import { answer, currentQid, isFinished, splitDoses, startSession, summary } from './session'
 import { dueLabel, isDue, nextReview } from './srs'
@@ -90,5 +90,28 @@ describe('repaso espaciado', () => {
     expect(dueLabel(now, now)).toBe('hoy')
     expect(dueLabel(now + 86_400_000, now)).toBe('mañana')
     expect(dueLabel(now + 10 * 86_400_000, now)).toBe('en 10 días')
+  })
+})
+
+describe('ordenar y clasificar', () => {
+  const order: OrderQuestion = { ...base, type: 'order', prompt: 'Ordena', items: ['Profase', 'Metafase', 'Anafase', 'Telofase'] }
+  it('ordenar: solo vale el orden correcto', () => {
+    expect(checkOrder(order, [0, 1, 2, 3])).toBe(true)
+    expect(checkOrder(order, [1, 0, 2, 3])).toBe(false)
+    expect(checkOrder(order, [0, 1, 2])).toBe(false)
+  })
+  it('ordenar: pide al menos 3 pasos', () => {
+    expect(validateQuestion({ ...order, items: ['a', 'b'] })).toMatch(/3 pasos/)
+    expect(validateQuestion(order)).toBeNull()
+  })
+  const classify: ClassifyQuestion = { ...base, type: 'classify', prompt: '¿Animal o vegetal?', groups: [{ name: 'Animal', items: ['Centriolo'] }, { name: 'Vegetal', items: ['Pared celular', 'Cloroplasto'] }] }
+  it('clasificar: cada elemento en su grupo', () => {
+    const q = { ...classify, groups: classify.groups.map((g) => ({ name: g.name, items: [...g.items] })) }
+    expect(classifyItems(q).map((i) => i.group)).toEqual([0, 1, 1])
+    expect(checkClassify(q, [0, 1, 1])).toBe(true)
+    expect(checkClassify(q, [1, 1, 1])).toBe(false)
+    expect(validateQuestion(q)).toBeNull()
+    expect(validateQuestion({ ...q, groups: [q.groups[0]] })).toMatch(/2 grupos/)
+    expect(correctAnswerText(q)).toBe('Animal: Centriolo · Vegetal: Pared celular, Cloroplasto')
   })
 })
