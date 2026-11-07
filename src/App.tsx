@@ -13,6 +13,7 @@ const TopicPage = lazy(() => import('./pages/TopicPage'))
 const QuestionsPage = lazy(() => import('./pages/QuestionsPage'))
 const PracticePage = lazy(() => import('./pages/PracticePage'))
 const ImportPage = lazy(() => import('./pages/ImportPage'))
+const CompetePage = lazy(() => import('./pages/CompetePage'))
 const ReaderPage = lazy(() => import('./pages/ReaderPage'))
 const ListenPage = lazy(() => import('./pages/ListenPage'))
 const VocabPage = lazy(() => import('./pages/VocabPage'))
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/tema/:topicId/pegar" element={<ImportPage />} />
           <Route path="/tema/:topicId/escuchar" element={<ListenPage />} />
           <Route path="/tema/:topicId/leer" element={<ReaderPage />} />
+          <Route path="/tema/:topicId/competir" element={<CompetePage />} />
           <Route path="/tema/:topicId/vocabulario" element={<VocabPage />} />
           <Route path="/tema/:topicId/vocabulario/practicar" element={<VocabPracticePage />} />
           <Route path="/progreso" element={<ProgressPage />} />

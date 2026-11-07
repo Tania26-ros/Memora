@@ -72,6 +72,11 @@ export default function QuestionsCard({ topicId }: { topicId: number }) {
             🎧 Escuchar
           </Link>
         )}
+        {total >= 3 && (
+          <Link className="btn btn-ghost" to={`/tema/${topicId}/competir`}>
+            🏆 Competir
+          </Link>
+        )}
       </div>
     </div>
   )
