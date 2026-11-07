@@ -18,6 +18,7 @@ const ListenPage = lazy(() => import('./pages/ListenPage'))
 const VocabPage = lazy(() => import('./pages/VocabPage'))
 const VocabPracticePage = lazy(() => import('./pages/VocabPracticePage'))
 const ProgressPage = lazy(() => import('./pages/ProgressPage'))
+const AccountPage = lazy(() => import('./pages/AccountPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
 // Estructura general: encabezado, la página actual y pie.
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/tema/:topicId/vocabulario/practicar" element={<VocabPracticePage />} />
           <Route path="/progreso" element={<ProgressPage />} />
           <Route path="/ajustes" element={<SettingsPage />} />
+          <Route path="/cuenta" element={<AccountPage />} />
           <Route path="*" element={<p className="empty">Esta página no existe. <Link to="/">Volver al inicio</Link></p>} />
         </Routes>
         </Suspense>

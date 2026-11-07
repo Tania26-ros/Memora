@@ -479,3 +479,9 @@ a.topbar-right { text-decoration: none; }
   .book { box-shadow: none; background: #fff !important; color: #000 !important; max-width: none; padding: 0; font-size: 12pt !important; }
   .page-break { break-before: page; }
 }
+
+/* ── Etapa 5: cuenta y copias ── */
+.account-link { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; color: var(--text); text-decoration: none; }
+.account-link small { display: block; }
+.confirm-box { margin-top: 0.75rem; padding: 0.75rem; border: 2px solid #f59e0b; border-radius: 12px; background: var(--surface-2); }
+.confirm-box p { margin: 0 0 0.5rem; }

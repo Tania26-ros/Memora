@@ -15,6 +15,14 @@ export default function SettingsPage() {
       <h1 className="page-title">Ajustes</h1>
       <p className="lead">Elige cómo quieres que se vea y se sienta Memora. Los cambios se ven al instante.</p>
 
+      <Link to="/cuenta" className="card settings-section account-link">
+        <span>
+          <strong>☁️ Cuenta y copias de seguridad</strong>
+          <small className="muted"> Guarda tus cuadernos para no perderlos y úsalos en otro equipo.</small>
+        </span>
+        <span aria-hidden>›</span>
+      </Link>
+
       <div className="card settings-section">
         <h2>Estilo</h2>
         <div className="theme-grid" role="radiogroup" aria-label="Estilo">

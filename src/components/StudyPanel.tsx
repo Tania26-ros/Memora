@@ -17,12 +17,6 @@ const OPTIONS: { group: string; items: { label: string; stage: number }[] }[] = 
     ],
   },
   {
-    group: 'Cuenta',
-    items: [
-      { label: 'Guardar en la nube y usar en varios equipos', stage: 5 },
-    ],
-  },
-  {
     group: 'Escuchar y hablar',
     items: [
       { label: 'Diálogos para practicar conversación', stage: 7 },
