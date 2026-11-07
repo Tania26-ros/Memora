@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Question } from './questions'
+import type { DayActivity } from './progress'
 import type { ReviewState } from './srs'
 import { makeThumbnail } from './thumbnail'
 
@@ -66,6 +67,7 @@ export class MemoraDB extends Dexie {
   files!: EntityTable<StudyFile, 'id'>
   questions!: EntityTable<Question, 'id'>
   reviews!: EntityTable<ReviewState, 'questionId'>
+  days!: EntityTable<DayActivity, 'date'>
 
   constructor(name = 'memora') {
     super(name)
@@ -82,6 +84,10 @@ export class MemoraDB extends Dexie {
     this.version(2).stores({
       questions: '++id, topicId, type, createdAt',
       reviews: 'questionId, topicId, due',
+    })
+    // Versión 3 (etapa 2, parte 3): lo que estudias cada día (puntos y rachas).
+    this.version(3).stores({
+      days: 'date',
     })
   }
 }

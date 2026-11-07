@@ -9,6 +9,7 @@ import { DIFFICULTIES, QUESTION_TYPES, correctAnswerText, shuffle, type Difficul
 import { answer, currentQid, isFinished, splitDoses, startSession, summary, type Session } from '../lib/session'
 import { TIMER_OPTIONS, timerLabel, updateSettings, useSettings } from '../lib/settings'
 import { isDue, recordReview, type ReviewState } from '../lib/srs'
+import { levelInfo, pointsFor, recordActivity, totalXp } from '../lib/progress'
 
 type Filter = 'todas' | 'nuevas' | 'falladas' | 'estrella' | 'repaso'
 const FILTERS: { value: Filter; label: string }[] = [
@@ -34,7 +35,7 @@ function matchesFilter(f: Filter, q: Question, r: ReviewState | undefined) {
   }
 }
 
-type Phase = { name: 'setup' } | { name: 'study'; doses: number[][]; dose: number } | { name: 'play'; doses: number[][]; dose: number } | { name: 'results'; doses: number[][]; dose: number; session: Session }
+type Phase = { name: 'setup' } | { name: 'study'; doses: number[][]; dose: number } | { name: 'play'; doses: number[][]; dose: number } | { name: 'results'; doses: number[][]; dose: number; session: Session; xp: number }
 
 // Página de juego: elegir preguntas → (estudiar primero) → jugar por dosis → resultados.
 export default function PracticePage() {
@@ -72,12 +73,13 @@ export default function PracticePage() {
           byId={byId}
           dose={phase.dose}
           total={phase.doses.length}
-          onFinish={(session) => setPhase({ ...phase, name: 'results', session })}
+          onFinish={(session, xp) => setPhase({ ...phase, name: 'results', session, xp })}
         />
       )}
       {phase.name === 'results' && (
         <Results
           session={phase.session}
+          xp={phase.xp}
           byId={byId}
           dose={phase.dose}
           total={phase.doses.length}
@@ -303,13 +305,15 @@ function Study({ questions, dose, total, onPlay }: { questions: Question[]; dose
 }
 
 // ── 3. Jugar ─────────────────────────────────────────────────
-function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<number, Question>; dose: number; total: number; onFinish: (s: Session) => void }) {
+function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<number, Question>; dose: number; total: number; onFinish: (s: Session, xp: number) => void }) {
   const s = useSettings()
   const [session, setSession] = useState(() => startSession(ids, s.repeatUntil))
   const [result, setResult] = useState<null | 'ok' | 'fail' | 'timeout'>(null)
   const [round, setRound] = useState(0) // cambia en cada pregunta mostrada, para reiniciar el temporizador
   const [streak, setStreak] = useState(0)
   const [hintRound, setHintRound] = useState(-1) // en qué ronda se pidió la pista
+  const [xp, setXp] = useState(0) // puntos ganados en esta dosis
+  const [lastPts, setLastPts] = useState(0)
 
   const qid = currentQid(session)
   const q = qid !== undefined ? byId.get(qid) : undefined
@@ -322,6 +326,10 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
   const respond = (correct: boolean, timeout = false) => {
     if (result) return
     setResult(correct ? 'ok' : timeout ? 'timeout' : 'fail')
+    const pts = pointsFor({ difficulty: q.difficulty, correct, retry: seenBefore, hint: hintRound === round, streak: correct ? streak + 1 : 0 })
+    setXp(xp + pts)
+    setLastPts(pts)
+    void recordActivity(pts, correct)
     if (correct) {
       const n = streak + 1
       setStreak(n)
@@ -342,7 +350,7 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
     const ns = answer(session, result === 'ok' ? 'ok' : 'fail')
     setResult(null)
     setRound(round + 1)
-    if (isFinished(ns)) onFinish(ns)
+    if (isFinished(ns)) onFinish(ns, xp)
     else setSession(ns)
   }
 
@@ -353,6 +361,7 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
         <span>
           Aprendidas {learned} de {ids.length}
         </span>
+        <span className="pts">⭐ {xp}</span>
         {streak >= 2 && <span className="streak">🔥 {streak}</span>}
       </div>
       <div className="progress" aria-hidden>
@@ -381,7 +390,9 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
 
       {result && (
         <div className={`feedback feedback-${result === 'ok' ? 'ok' : 'fail'}`} role="status">
-          <strong>{result === 'ok' ? '¡Correcto!' : result === 'timeout' ? 'Se acabó el tiempo' : 'Incorrecto'}</strong>
+          <strong>
+            {result === 'ok' ? '¡Correcto!' : result === 'timeout' ? 'Se acabó el tiempo' : 'Incorrecto'} <span className="pts">+{lastPts} {lastPts === 1 ? 'punto' : 'puntos'}</span>
+          </strong>
           {result !== 'ok' && <p>Respuesta correcta: {correctAnswerText(q)}</p>}
           {q.explanation && <p>{q.explanation}</p>}
           {result !== 'ok' && <p className="muted">Esta pregunta volverá al final de la ronda.</p>}
@@ -396,9 +407,10 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
 
 // ── 4. Resultados ────────────────────────────────────────────
 function Results({
-  session, byId, dose, total, topicId, onNext, onRepeat, onSetup,
+  session, xp, byId, dose, total, topicId, onNext, onRepeat, onSetup,
 }: {
   session: Session
+  xp: number
   byId: Map<number, Question>
   dose: number
   total: number
@@ -409,11 +421,30 @@ function Results({
 }) {
   const r = summary(session)
   const pct = Math.round((r.firstTry / r.total) * 100)
+  const all = useLiveQuery(() => totalXp(), [])
+  const now = all !== undefined ? levelInfo(all) : null
+  const before = all !== undefined ? levelInfo(Math.max(0, all - xp)) : null
   return (
     <div className="results">
       <div className="card results-card">
         <p className="results-big">{pct}%</p>
         <h1>{pct === 100 ? '¡Perfecto!' : pct >= 70 ? '¡Muy bien!' : 'Sigue practicando'}</h1>
+        <p className="results-xp">+{xp} puntos</p>
+        {now && before && now.level > before.level && (
+          <p className="level-up" role="status">
+            🎉 ¡Subiste al nivel {now.level}: {now.name}!
+          </p>
+        )}
+        {now && (
+          <Link to="/progreso" className="level-mini" aria-label={`Nivel ${now.level}, ${now.pct}% hacia el siguiente`}>
+            <span>
+              Nivel {now.level} · {now.name}
+            </span>
+            <span className="xp-bar">
+              <span style={{ width: `${now.pct}%` }} />
+            </span>
+          </Link>
+        )}
         <p>
           Acertaste {r.firstTry} de {r.total} a la primera. Todas quedaron aprendidas en esta ronda.
         </p>
