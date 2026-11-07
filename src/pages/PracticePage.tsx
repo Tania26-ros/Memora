@@ -1,8 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import Player from '../components/game/Players'
 import TimerBar from '../components/game/TimerBar'
+import { SpeakButton } from '../components/Voice'
+import { langFor, questionSpeech, say } from '../lib/voice'
+import { stopSpeaking } from '../lib/speech'
 import { confetti, playCorrect, playWrong, rain, vibrate } from '../lib/effects'
 import { db } from '../lib/db'
 import { DIFFICULTIES, QUESTION_TYPES, correctAnswerText, shuffle, type Difficulty, type Question, type QuestionType } from '../lib/questions'
@@ -321,6 +324,13 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
   const seenBefore = qid !== undefined && session.items[qid].attempts > 0
   const mix = useMemo(() => s.shuffle, [s.shuffle])
 
+  // Leer la pregunta al aparecer, si se eligió en Ajustes. Se calla al salir.
+  useEffect(() => {
+    if (s.autoRead && q) void say(questionSpeech(q))
+    return stopSpeaking
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round])
+
   if (!q) return null
 
   const respond = (correct: boolean, timeout = false) => {
@@ -374,7 +384,10 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
           <span className="badge">{QUESTION_TYPES.find((t) => t.value === q.type)?.label}</span>
           {seenBefore && <span className="badge">Otra vez</span>}
         </div>
-        <h2 className="q-prompt">{q.prompt}</h2>
+        <div className="q-prompt-row">
+          <h2 className="q-prompt">{q.prompt}</h2>
+          <SpeakButton text={questionSpeech(q)} label="Leer la pregunta" />
+        </div>
         {s.hints && q.hint && !result && (
           hintRound === round ? (
             <p className="hint-box">💡 {q.hint}</p>
@@ -385,7 +398,7 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
           )
         )}
         {s.timerOn && <TimerBar key={round} seconds={s.timerSeconds} running={!result} onExpire={() => respond(false, true)} />}
-        <Player key={round} q={q} answered={!!result} mix={mix} onAnswer={(ok) => respond(ok)} />
+        <Player key={round} q={q} answered={!!result} mix={mix} lang={langFor(q.prompt)} onAnswer={(ok) => respond(ok)} />
       </article>
 
       {result && (

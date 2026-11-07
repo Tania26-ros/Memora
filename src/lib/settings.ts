@@ -19,6 +19,11 @@ export interface Settings {
   textScale: number
   /** Puntos que quieres ganar cada día. */
   dailyGoal: number
+  /** Idioma de la voz: 'auto' = adivinarlo por el texto. */
+  voiceLang: string
+  voiceRate: number
+  /** Leer cada pregunta en voz alta al aparecer. */
+  autoRead: boolean
 }
 
 export type ThemeId = 'clasico' | 'oscuro' | 'minimalista' | 'vintage' | 'pastel' | 'neon' | 'naturaleza'
@@ -60,7 +65,16 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'clasico',
   textScale: 1,
   dailyGoal: 60,
+  voiceLang: 'auto',
+  voiceRate: 1,
+  autoRead: false,
 }
+
+export const VOICE_RATES = [
+  { value: 0.75, label: 'Lenta' },
+  { value: 1, label: 'Normal' },
+  { value: 1.25, label: 'Rápida' },
+]
 
 /** Opciones de tiempo por pregunta: de 5 segundos a 5 minutos. */
 export const TIMER_OPTIONS = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300]

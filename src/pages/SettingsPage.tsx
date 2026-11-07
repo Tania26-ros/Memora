@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
-import { DAILY_GOALS, TEXT_SCALES, THEMES, updateSettings, useSettings } from '../lib/settings'
+import { DAILY_GOALS, TEXT_SCALES, THEMES, VOICE_RATES, updateSettings, useSettings } from '../lib/settings'
+import { LANGUAGES, canListen, canSpeak } from '../lib/speech'
+import { say } from '../lib/voice'
 
 // Ajustes: estilo visual, tamaño de letra, meta diaria y efectos del juego.
 // Todo se guarda en este dispositivo y se aplica al instante.
@@ -50,6 +52,46 @@ export default function SettingsPage() {
           ))}
         </div>
         <p className="muted">{DAILY_GOALS.find((g) => g.value === s.dailyGoal)?.hint}</p>
+      </div>
+
+      <div className="card settings-section">
+        <h2>Voz</h2>
+        {!canSpeak() && <p className="import-problem">Este navegador no puede leer en voz alta. Prueba con Chrome (Android) o Safari (iPhone).</p>}
+        <div className="setup-grid">
+          <label className="field" htmlFor="voice-lang">
+            <span>Idioma de la voz</span>
+            <select id="voice-lang" className="input" value={s.voiceLang} onChange={(e) => updateSettings({ voiceLang: e.target.value })}>
+              <option value="auto">Automático (según el texto)</option>
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="field">
+            <span>Velocidad</span>
+            <div className="seg" role="radiogroup" aria-label="Velocidad de la voz">
+              {VOICE_RATES.map((r) => (
+                <button key={r.value} type="button" role="radio" aria-checked={s.voiceRate === r.value} className={`seg-btn ${s.voiceRate === r.value ? 'seg-on' : ''}`} onClick={() => updateSettings({ voiceRate: r.value })}>
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="chips">
+          <label className="check">
+            <input type="checkbox" checked={s.autoRead} onChange={(e) => updateSettings({ autoRead: e.target.checked })} />
+            Leer cada pregunta al aparecer
+          </label>
+          <button type="button" className="btn btn-small btn-ghost" onClick={() => void say(s.voiceLang.startsWith('en') ? 'Hello! This is how I sound.' : 'Hola, así sueno al leer tus preguntas.')}>
+            🔊 Probar la voz
+          </button>
+        </div>
+        <p className="muted">
+          {canListen() ? 'Para responder hablando, toca 🎤 en el juego. La primera vez el celular te pedirá permiso para el micrófono.' : 'Este navegador no permite responder hablando; podrás escribir o tocar la respuesta.'} Si una voz suena rara, instala la voz de ese idioma en los ajustes de «Texto a voz» de tu celular.
+        </p>
       </div>
 
       <div className="card settings-section">

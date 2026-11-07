@@ -419,3 +419,36 @@ button.opt { min-height: 52px; padding: 0.55rem 0.75rem; color: var(--text); fon
 .settings-section { margin-bottom: 0.75rem; }
 .settings-section h2 { margin-top: 0; }
 a.topbar-right { text-decoration: none; }
+
+/* ── Etapa 3: voz e idiomas ── */
+.q-prompt-row { display: flex; align-items: flex-start; gap: 0.5rem; justify-content: space-between; }
+.voice-btn { flex: none; min-width: 44px; }
+.voice-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.voice-row .hint { margin: 0; }
+.mic-wrap { display: inline-flex; flex-direction: column; gap: 0.35rem; }
+.mic-on { background: var(--fail); color: #fff; animation: pulse 1.2s ease-in-out infinite; }
+.mic-error { color: var(--fail); font-size: 0.85rem; font-weight: 600; max-width: 32rem; }
+.listen-card { text-align: center; display: grid; gap: 0.75rem; }
+.listen-stage { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; }
+.listen-text { font-size: 1.25rem; font-weight: 700; margin: 0; }
+.listen-answer { font-size: 1.1rem; color: var(--ok); font-weight: 700; margin: 0; }
+.listen-controls { display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; }
+.listen-controls .btn { min-width: 64px; font-size: 1.2rem; }
+.vocab-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.vocab-item { padding: 0.75rem 0.9rem; }
+.vocab-term { margin: 0; font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.vocab-item dl { margin: 0.35rem 0 0; display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.6rem; font-size: 0.9rem; }
+.vocab-item dt { color: var(--muted); }
+.vocab-item dd { margin: 0; }
+.hidden-info { filter: blur(6px); cursor: pointer; user-select: none; transition: filter 0.2s; }
+.hidden-info:focus, .hidden-info.shown { filter: none; }
+.shade-text { line-height: 2.1; font-size: 1.05rem; margin: 0.5rem 0; padding: 0.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.shade-word { padding: 0.1em 0.12em; border: 0; border-radius: 4px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.shade-word:hover { background: var(--surface-2); }
+.shade-word.saved { background: #fde68a; color: #3b2f00; }
+.shade-word.picked { background: var(--primary); color: var(--primary-text); }
+.grade { margin: 0; padding: 0.5rem 0.75rem; border-radius: 10px; font-weight: 700; }
+.grade-correcto { background: var(--ok-soft); color: var(--ok); }
+.grade-casi { background: #fef3c7; color: #92400e; }
+.grade-incorrecto { background: var(--fail-soft); color: var(--fail); }
+.vocab-big { font-size: 1.8rem; font-weight: 800; text-align: center; margin: 0.5rem 0; }
