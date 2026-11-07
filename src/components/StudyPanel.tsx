@@ -11,8 +11,6 @@ const OPTIONS: { group: string; items: { label: string; stage: number }[] }[] = 
   {
     group: 'Juegos',
     items: [
-      { label: 'Competir con amigos y rankings', stage: 6 },
-      { label: 'Juegos públicos de la comunidad', stage: 6 },
       { label: 'Crear preguntas automáticamente', stage: 7 },
     ],
   },

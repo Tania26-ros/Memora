@@ -12,3 +12,16 @@ Memora funciona sin nube. Para que la gente pueda entrar con su correo y guardar
    y vuelve a desplegar.
 
 Listo: en **Ajustes → Cuenta y copias** aparecerá «Entrar con tu correo».
+
+## Comunidad (etapa 6)
+
+Ejecuta también `supabase/migrations/20261107010000_memora_comunidad.sql`. Crea los créditos (con registro de cada movimiento), los juegos públicos y privados, y las competencias con premios.
+
+Para probar las reglas sin tocar el proyecto real, con un PostgreSQL local:
+
+```bash
+createdb memora_prueba
+psql -d memora_prueba -f supabase/tests/00_imitar_supabase.sql
+for f in supabase/migrations/*.sql; do psql -d memora_prueba -f "$f"; done
+psql -d memora_prueba -f supabase/tests/comunidad.sql
+```

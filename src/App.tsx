@@ -13,6 +13,8 @@ const TopicPage = lazy(() => import('./pages/TopicPage'))
 const QuestionsPage = lazy(() => import('./pages/QuestionsPage'))
 const PracticePage = lazy(() => import('./pages/PracticePage'))
 const ImportPage = lazy(() => import('./pages/ImportPage'))
+const CommunityPage = lazy(() => import('./pages/CommunityPage'))
+const ChallengePage = lazy(() => import('./pages/ChallengePage'))
 const CompetePage = lazy(() => import('./pages/CompetePage'))
 const ReaderPage = lazy(() => import('./pages/ReaderPage'))
 const ListenPage = lazy(() => import('./pages/ListenPage'))
@@ -35,6 +37,9 @@ export default function App() {
         <div className="topbar-right">
           <InstallButton />
           <StatsChips />
+          <Link to="/comunidad" className="icon-btn" aria-label="Comunidad">
+            🌐
+          </Link>
           <Link to="/ajustes" className="icon-btn" aria-label="Ajustes">
             ⚙️
           </Link>
@@ -55,6 +60,8 @@ export default function App() {
           <Route path="/tema/:topicId/competir" element={<CompetePage />} />
           <Route path="/tema/:topicId/vocabulario" element={<VocabPage />} />
           <Route path="/tema/:topicId/vocabulario/practicar" element={<VocabPracticePage />} />
+          <Route path="/comunidad" element={<CommunityPage />} />
+          <Route path="/comunidad/reto/:challengeId" element={<ChallengePage />} />
           <Route path="/progreso" element={<ProgressPage />} />
           <Route path="/ajustes" element={<SettingsPage />} />
           <Route path="/cuenta" element={<AccountPage />} />
