@@ -24,7 +24,19 @@ export interface Settings {
   voiceRate: number
   /** Leer cada pregunta en voz alta al aparecer. */
   autoRead: boolean
+  /** Lector tipo libro: tamaño de letra, color del papel e interlineado. */
+  readerScale: number
+  paper: PaperId
+  readerSpacing: number
 }
+
+export type PaperId = 'blanco' | 'crema' | 'sepia' | 'noche'
+export const PAPERS: { id: PaperId; label: string; bg: string; fg: string }[] = [
+  { id: 'blanco', label: 'Blanco', bg: '#ffffff', fg: '#1a1a1a' },
+  { id: 'crema', label: 'Crema', bg: '#fbf5e6', fg: '#2b2418' },
+  { id: 'sepia', label: 'Sepia', bg: '#f1e2c4', fg: '#3d2f1c' },
+  { id: 'noche', label: 'Noche', bg: '#1b1b1f', fg: '#e6e2d8' },
+]
 
 export type ThemeId = 'clasico' | 'oscuro' | 'minimalista' | 'vintage' | 'pastel' | 'neon' | 'naturaleza'
 
@@ -68,6 +80,9 @@ export const DEFAULT_SETTINGS: Settings = {
   voiceLang: 'auto',
   voiceRate: 1,
   autoRead: false,
+  readerScale: 1.2,
+  paper: 'crema',
+  readerSpacing: 1.7,
 }
 
 export const VOICE_RATES = [
