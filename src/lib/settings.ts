@@ -13,7 +13,44 @@ export interface Settings {
   shuffle: boolean
   /** Mostrar el botón «Ver pista» en las preguntas que tienen pista. */
   hints: boolean
+  /** Estilo visual de toda la app. */
+  theme: ThemeId
+  /** Tamaño de la letra: 1 = normal. */
+  textScale: number
+  /** Puntos que quieres ganar cada día. */
+  dailyGoal: number
+  /** Idioma de la voz: 'auto' = adivinarlo por el texto. */
+  voiceLang: string
+  voiceRate: number
+  /** Leer cada pregunta en voz alta al aparecer. */
+  autoRead: boolean
 }
+
+export type ThemeId = 'clasico' | 'oscuro' | 'minimalista' | 'vintage' | 'pastel' | 'neon' | 'naturaleza'
+
+/** swatch = colores para la vista previa: fondo, tarjeta, color principal, texto. */
+export const THEMES: { id: ThemeId; label: string; hint: string; swatch: [string, string, string, string] }[] = [
+  { id: 'clasico', label: 'Clásico', hint: 'Claro u oscuro según tu celular', swatch: ['#f6f5fb', '#ffffff', '#5b4cf0', '#1c1a29'] },
+  { id: 'oscuro', label: 'Oscuro', hint: 'Descansa la vista de noche', swatch: ['#121019', '#1c1926', '#8b7dff', '#edeaf7'] },
+  { id: 'minimalista', label: 'Minimalista', hint: 'Blanco y negro, sin distracciones', swatch: ['#ffffff', '#ffffff', '#111111', '#111111'] },
+  { id: 'vintage', label: 'Vintage', hint: 'Papel antiguo y letra clásica', swatch: ['#f3ead7', '#fbf6ea', '#8b4a1c', '#3b2f22'] },
+  { id: 'pastel', label: 'Pastel', hint: 'Rosa suave y bordes redondos', swatch: ['#fff4f8', '#ffffff', '#e2557f', '#40263a'] },
+  { id: 'neon', label: 'Neón', hint: 'Oscuro con colores brillantes', swatch: ['#0a0a16', '#13132b', '#00e5ff', '#e8f7ff'] },
+  { id: 'naturaleza', label: 'Naturaleza', hint: 'Verdes tranquilos', swatch: ['#eff5ec', '#ffffff', '#2f7d32', '#1f2d1f'] },
+]
+
+export const TEXT_SCALES = [
+  { value: 1, label: 'Normal' },
+  { value: 1.12, label: 'Grande' },
+  { value: 1.25, label: 'Muy grande' },
+]
+
+export const DAILY_GOALS = [
+  { value: 30, label: 'Suave', hint: '30 puntos · unas 3 preguntas' },
+  { value: 60, label: 'Normal', hint: '60 puntos · unas 5 preguntas' },
+  { value: 120, label: 'Intensa', hint: '120 puntos · unas 10 preguntas' },
+  { value: 250, label: 'Maratón', hint: '250 puntos · unas 20 preguntas' },
+]
 
 export const DEFAULT_SETTINGS: Settings = {
   sound: true,
@@ -25,7 +62,19 @@ export const DEFAULT_SETTINGS: Settings = {
   repeatUntil: 2,
   shuffle: false,
   hints: true,
+  theme: 'clasico',
+  textScale: 1,
+  dailyGoal: 60,
+  voiceLang: 'auto',
+  voiceRate: 1,
+  autoRead: false,
 }
+
+export const VOICE_RATES = [
+  { value: 0.75, label: 'Lenta' },
+  { value: 1, label: 'Normal' },
+  { value: 1.25, label: 'Rápida' },
+]
 
 /** Opciones de tiempo por pregunta: de 5 segundos a 5 minutos. */
 export const TIMER_OPTIONS = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300]
@@ -46,6 +95,18 @@ function load(): Settings {
   }
 }
 
+/** Aplica el estilo y el tamaño de letra a toda la página. */
+function applyLook(s: Settings) {
+  if (typeof document === 'undefined') return
+  const root = document.documentElement
+  root.dataset.theme = s.theme
+  root.style.fontSize = s.textScale === 1 ? '' : `${s.textScale * 100}%`
+  // Color de la barra del navegador en el celular.
+  const bar = THEMES.find((t) => t.id === s.theme)?.swatch[0]
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', s.theme === 'clasico' ? '#5b4cf0' : (bar ?? '#5b4cf0'))
+}
+applyLook(current)
+
 export function getSettings() {
   return current
 }
@@ -57,6 +118,7 @@ export function updateSettings(patch: Partial<Settings>) {
   } catch {
     // Sin almacenamiento (modo privado): se usan solo durante esta visita.
   }
+  applyLook(current)
   listeners.forEach((l) => l())
 }
 
