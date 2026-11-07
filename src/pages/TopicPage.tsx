@@ -4,6 +4,7 @@ import EditableTitle from '../components/EditableTitle'
 import FileList from '../components/FileList'
 import FileUploader from '../components/FileUploader'
 import QuestionsCard from '../components/QuestionsCard'
+import VocabCard from '../components/VocabCard'
 import StudyPanel from '../components/StudyPanel'
 import { deleteTopicWithUndo } from '../lib/actions'
 import { db } from '../lib/db'
@@ -54,6 +55,12 @@ export default function TopicPage() {
       <div className="topic-layout">
         <div className="topic-main">
           <QuestionsCard topicId={topicId} />
+          <VocabCard topicId={topicId} />
+          <div className="card-actions">
+            <Link className="btn btn-ghost" to={`/tema/${topicId}/leer`}>
+              📖 Leer como libro y descargar (Word o PDF)
+            </Link>
+          </div>
           <FileUploader topicId={topicId} />
           <h2>
             Materiales <span className="muted">({files.length})</span>
