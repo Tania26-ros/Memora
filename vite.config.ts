@@ -34,7 +34,8 @@ export default defineConfig({
         // se guardan la primera vez que abres el selector y luego funcionan sin internet.
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.endsWith('.json'),
+            // Solo archivos de la propia app: nunca las copias de la nube (siempre deben ser las más nuevas).
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.endsWith('.json'),
             handler: 'CacheFirst',
             options: { cacheName: 'memora-datos' },
           },

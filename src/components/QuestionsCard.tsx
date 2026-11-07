@@ -67,6 +67,16 @@ export default function QuestionsCard({ topicId }: { topicId: number }) {
         <Link className={`btn ${now === 1 && total > 0 ? '' : 'btn-ghost'}`} to={`/tema/${topicId}/pegar`}>
           📋 Pegar preguntas
         </Link>
+        {total > 0 && (
+          <Link className="btn btn-ghost" to={`/tema/${topicId}/escuchar`}>
+            🎧 Escuchar
+          </Link>
+        )}
+        {total >= 3 && (
+          <Link className="btn btn-ghost" to={`/tema/${topicId}/competir`}>
+            🏆 Competir
+          </Link>
+        )}
       </div>
     </div>
   )
