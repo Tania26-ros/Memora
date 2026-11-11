@@ -48,6 +48,7 @@ export default function VocabPage() {
   const saved = useMemo(() => new Set((words ?? []).map((w) => normalize(w.term))), [words])
 
   const setText = (v: string) => {
+    setEditingText(editingText) // fija el modo actual: escribir no debe cerrar el editor
     setTextState(v)
     setPick(null)
     void db.vocabLists.update(listId, { text: v, position: 0 })

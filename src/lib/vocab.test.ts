@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseWordList, phrase, sentenceOf, splitSentences, tokenize } from './vocab'
+import { parseWordList, phrase, sentenceOf, splitSentences, tokenize, wordsToQuestions } from './vocab'
 
 describe('vocabulario', () => {
   const text = 'I wake up early. Then I take the bus to school!'
@@ -36,5 +36,19 @@ describe('frases para leer en voz alta', () => {
   })
   it('ignora el texto vacío', () => {
     expect(splitSentences('  \n\n ')).toEqual([])
+  })
+})
+
+describe('competir con un vocabulario', () => {
+  it('cada palabra con significado es una pregunta con alternativas de otras palabras', () => {
+    const w = (term: string, meaning?: string) => ({ id: 1, topicId: 1, listId: 1, term, meaning, lang: 'en-US', createdAt: 0 })
+    const qs = wordsToQuestions([w('apple', 'manzana'), w('pear', 'pera'), w('grape', 'uva'), w('plum', 'ciruela'), w('kiwi', 'kiwi'), w('nada')], 3, () => 0.3)
+    expect(qs).toHaveLength(5)
+    for (const q of qs) {
+      expect(q.options).toHaveLength(4)
+      expect(new Set(q.options).size).toBe(4)
+    }
+    expect(qs[0].prompt).toBe('¿Qué significa «apple»?')
+    expect(qs[0].options[qs[0].correct]).toBe('manzana')
   })
 })

@@ -1,3 +1,6 @@
+import type { Word } from './db'
+import { normalize, shuffle, type McqQuestion } from './questions'
+
 // ─────────────────────────────────────────────────────────────
 // Vocabulario: herramientas para sombrear palabras en un texto.
 // ─────────────────────────────────────────────────────────────
@@ -92,4 +95,31 @@ export function splitSentences(text: string, maxLen = 220): string[] {
     }
   }
   return out
+}
+
+/**
+ * Convierte palabras con significado en preguntas de opción múltiple
+ * («¿Qué significa «people»?»), para competir con un vocabulario.
+ * Las alternativas incorrectas son significados de otras palabras.
+ */
+export function wordsToQuestions(words: Word[], topicId: number, rand: () => number = Math.random): McqQuestion[] {
+  const usable = words.filter((w) => w.meaning?.trim())
+  const meanings = [...new Set(usable.map((w) => w.meaning!.trim()))]
+  return usable.map((w, i) => {
+    const right = w.meaning!.trim()
+    const wrong = shuffle(meanings.filter((m) => normalize(m) !== normalize(right)), rand).slice(0, 3)
+    const options = shuffle([right, ...wrong], rand)
+    return {
+      id: -(i + 1),
+      topicId,
+      type: 'mcq',
+      prompt: `¿Qué significa «${w.term}»?`,
+      options,
+      correct: options.indexOf(right),
+      difficulty: 'regular',
+      explanation: w.example,
+      hint: w.hint,
+      createdAt: 0,
+    }
+  })
 }
