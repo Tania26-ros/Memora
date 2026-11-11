@@ -24,8 +24,8 @@ export default function ProgressPage() {
   const streak = streakInfo(days)
   const week = lastDays(days, 7)
   const today = week[week.length - 1]
-  const max = Math.max(s.dailyGoal, ...week.map((d) => d.xp))
-  const goalPct = Math.min(100, Math.round((today.xp / s.dailyGoal) * 100))
+  const max = Math.max(s.dailyGoal, ...week.map((d) => d.answered))
+  const goalPct = Math.min(100, Math.round((today.answered / s.dailyGoal) * 100))
 
   return (
     <section>
@@ -52,8 +52,8 @@ export default function ProgressPage() {
           <p className="stat-label">{streak.current === 1 ? 'día de racha' : 'días de racha'}{streak.best > streak.current ? ` · tu mejor: ${streak.best}` : ''}</p>
         </div>
         <div className="card stat-card">
-          <p className="stat-value">{today.xp} / {s.dailyGoal}</p>
-          <p className="stat-label">{goalPct >= 100 ? '✓ Meta de hoy cumplida' : 'puntos de la meta de hoy'}</p>
+          <p className="stat-value">{today.answered} / {s.dailyGoal}</p>
+          <p className="stat-label">{goalPct >= 100 ? '✓ Meta de hoy cumplida' : 'preguntas de la meta de hoy'}</p>
           <span className="xp-bar" aria-hidden>
             <span style={{ width: `${goalPct}%` }} />
           </span>
@@ -69,14 +69,14 @@ export default function ProgressPage() {
       </div>
 
       <div className="card">
-        <h2>Últimos 7 días</h2>
-        <div className="week" role="img" aria-label={`Puntos por día: ${week.map((d) => d.xp).join(', ')}`}>
+        <h2>Preguntas de los últimos 7 días</h2>
+        <div className="week" role="img" aria-label={`Preguntas respondidas por día: ${week.map((d) => d.answered).join(', ')}`}>
           {week.map((d) => {
             const [y, m, dd] = d.date.split('-').map(Number)
             return (
-              <div key={d.date} className={`week-col ${d.xp >= s.dailyGoal ? 'goal-met' : ''} ${d.date === dayKey() ? 'today' : ''}`}>
-                <span>{d.xp || ''}</span>
-                <span className="week-bar" style={{ height: `${(d.xp / max) * 100}%` }} />
+              <div key={d.date} className={`week-col ${d.answered >= s.dailyGoal ? 'goal-met' : ''} ${d.date === dayKey() ? 'today' : ''}`}>
+                <span>{d.answered || ''}</span>
+                <span className="week-bar" style={{ height: `${(d.answered / max) * 100}%` }} />
                 <span>{WEEKDAY[new Date(y, m - 1, dd).getDay()]}</span>
               </div>
             )

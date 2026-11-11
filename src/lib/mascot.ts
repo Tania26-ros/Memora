@@ -29,7 +29,8 @@ export interface HomeState {
   hour: number
   notebooks: number
   questions: number
-  todayXp: number
+  /** Preguntas respondidas hoy. */
+  todayAnswered: number
   dailyGoal: number
   streak: number
   /** Preguntas cuyo repaso ya toca, y el tema con más pendientes. */
@@ -51,12 +52,12 @@ export function homeLine(s: HomeState): MascotLine {
       link: { to: `/tema/${s.dueTopic.id}/jugar`, label: `Repasar «${s.dueTopic.name}»` },
     }
   }
-  if (s.todayXp >= s.dailyGoal) {
+  if (s.todayAnswered >= s.dailyGoal) {
     return { mood: 'celebra', text: s.streak > 1 ? `¡Meta cumplida! Llevas ${s.streak} días seguidos. Así se hace.` : '¡Meta de hoy cumplida! Vuelve mañana para empezar tu racha.' }
   }
-  const left = s.dailyGoal - s.todayXp
-  if (s.streak > 1 && s.todayXp === 0) return { mood: 'animo', text: `${hi}! Llevas ${s.streak} días seguidos. Juega un poco hoy para no perder tu racha.` }
-  return { mood: 'feliz', text: `${hi}! Te faltan ${left} puntos para tu meta de hoy. Unas pocas preguntas bastan.` }
+  const left = s.dailyGoal - s.todayAnswered
+  if (s.streak > 1 && s.todayAnswered === 0) return { mood: 'animo', text: `${hi}! Llevas ${s.streak} días seguidos. Juega un poco hoy para no perder tu racha.` }
+  return { mood: 'feliz', text: `${hi}! Te ${left === 1 ? 'falta 1 pregunta' : `faltan ${left} preguntas`} para tu meta de hoy.` }
 }
 
 const OK = ['¡Bien!', '¡Eso es!', '¡Excelente!', '¡Correcto, sigue así!', '¡Lo tienes!'] as const
