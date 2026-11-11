@@ -3,7 +3,7 @@ import { db, type Word } from '../lib/db'
 import { LANGUAGES } from '../lib/speech'
 import { nowMs } from '../lib/questions'
 
-export type WordDraft = Partial<Omit<Word, 'id' | 'topicId' | 'createdAt'>> & { id?: number }
+export type WordDraft = Partial<Omit<Word, 'id' | 'topicId' | 'listId' | 'createdAt'>> & { id?: number }
 
 const FIELDS: { key: 'meaning' | 'synonyms' | 'antonyms' | 'example' | 'notes' | 'hint'; label: string; placeholder: string }[] = [
   { key: 'meaning', label: 'Significado', placeholder: 'Ej.: levantarse, despertarse' },
@@ -15,7 +15,7 @@ const FIELDS: { key: 'meaning' | 'synonyms' | 'antonyms' | 'example' | 'notes' |
 ]
 
 // Ventana para añadir o editar una palabra del vocabulario.
-export default function WordEditor({ topicId, draft, onClose }: { topicId: number; draft: WordDraft; onClose: () => void }) {
+export default function WordEditor({ topicId, listId, draft, onClose }: { topicId: number; listId: number; draft: WordDraft; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     if (ref.current && !ref.current.open) ref.current.showModal()
@@ -27,7 +27,7 @@ export default function WordEditor({ topicId, draft, onClose }: { topicId: numbe
     const term = w.term?.trim()
     if (!term) return setError('Escribe la palabra o frase.')
     const clean = Object.fromEntries(FIELDS.map((f) => [f.key, w[f.key]?.trim() || undefined]))
-    const data = { ...clean, term, lang: w.lang ?? 'en-US', topicId }
+    const data = { ...clean, term, lang: w.lang ?? 'en-US', topicId, listId }
     if (w.id) await db.words.update(w.id, data)
     else await db.words.add({ ...data, createdAt: nowMs() } as Word)
     ref.current?.close()

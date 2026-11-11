@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { clock } from '../../lib/duration'
 import { playTick, vibrate } from '../../lib/effects'
 
 // Barra de tiempo. En los últimos 3 segundos suena un pitido por segundo,
@@ -40,7 +41,7 @@ export default function TimerBar({ seconds, running, onExpire }: { seconds: numb
   return (
     <div className={`timer ${warn ? 'timer-warn' : ''}`} role="timer" aria-label={`Quedan ${secs} segundos`}>
       <div className="timer-fill" style={{ width: `${pct}%` }} />
-      <span className="timer-label">{secs >= 60 ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` : `${secs} s`}</span>
+      <span className="timer-label">{secs >= 60 ? clock(secs) : `${secs} s`}</span>
     </div>
   )
 }

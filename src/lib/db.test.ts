@@ -99,3 +99,38 @@ describe('editar y deshacer', () => {
     expect(await db.files.where('topicId').equals(tp).count()).toBe(1)
   })
 })
+
+describe('varios vocabularios por tema', () => {
+  it('pasa las palabras antiguas a un vocabulario «Vocabulario»', async () => {
+    const { default: Dexie } = await import('dexie')
+    const name = `migra-${Math.random()}`
+    const old = new Dexie(name)
+    old.version(4).stores({ notebooks: '++id, createdAt', topics: '++id, notebookId, createdAt', files: '++id, topicId, createdAt', questions: '++id, topicId, type, createdAt', reviews: 'questionId, topicId, due', days: 'date', words: '++id, topicId, createdAt' })
+    await old.table('words').bulkAdd([
+      { topicId: 1, term: 'apple', lang: 'en-US', createdAt: 1 },
+      { topicId: 1, term: 'pear', lang: 'en-US', createdAt: 2 },
+      { topicId: 2, term: 'chat', lang: 'fr-FR', createdAt: 3 },
+    ])
+    old.close()
+    const nuevo = new MemoraDB(name)
+    const lists = await nuevo.vocabLists.toArray()
+    expect(lists.map((l) => [l.topicId, l.name])).toEqual([
+      [1, 'Vocabulario'],
+      [2, 'Vocabulario'],
+    ])
+    const words = await nuevo.words.toArray()
+    expect(words.every((w) => lists.find((l) => l.id === w.listId)?.topicId === w.topicId)).toBe(true)
+    await nuevo.delete()
+  })
+
+  it('borrar un tema borra también sus vocabularios', async () => {
+    const nb = await createNotebook({ name: 'Inglés', color: '#000', emoji: '🗣️' }, db)
+    const t = await createTopic(nb, 'Canciones', db)
+    const { createVocabList } = await import('./db')
+    const l = await createVocabList(t, 'Imagine', db)
+    await db.words.add({ topicId: t, listId: l, term: 'dream', lang: 'en-US', createdAt: 1 } as never)
+    await deleteTopic(t, db)
+    expect(await db.vocabLists.count()).toBe(0)
+    expect(await db.words.count()).toBe(0)
+  })
+})

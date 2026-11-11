@@ -12,7 +12,8 @@ import { confetti, playCorrect, playWrong, rain, vibrate } from '../lib/effects'
 import { db } from '../lib/db'
 import { DIFFICULTIES, QUESTION_TYPES, correctAnswerText, shuffle, type Difficulty, type Question, type QuestionType } from '../lib/questions'
 import { answer, currentQid, isFinished, splitDoses, startSession, summary, type Session } from '../lib/session'
-import { TIMER_OPTIONS, timerLabel, updateSettings, useSettings } from '../lib/settings'
+import DurationPicker from '../components/DurationPicker'
+import { updateSettings, useSettings } from '../lib/settings'
 import { isDue, recordReview, type ReviewState } from '../lib/srs'
 import { levelInfo, pointsFor, recordActivity, totalXp } from '../lib/progress'
 
@@ -225,17 +226,6 @@ function Setup({
               <option value={3}>3 veces seguidas</option>
             </select>
           </label>
-          <label className="field" htmlFor="timer">
-            <span>Tiempo por pregunta</span>
-            <select id="timer" className="input" value={s.timerOn ? s.timerSeconds : 0} onChange={(e) => (Number(e.target.value) ? updateSettings({ timerOn: true, timerSeconds: Number(e.target.value) }) : updateSettings({ timerOn: false }))}>
-              <option value={0}>Sin tiempo</option>
-              {TIMER_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {timerLabel(t)}
-                </option>
-              ))}
-            </select>
-          </label>
           <label className="field" htmlFor="order">
             <span>Orden</span>
             <select id="order" className="input" value={s.shuffle ? 'mix' : 'file'} onChange={(e) => updateSettings({ shuffle: e.target.value === 'mix' })}>
@@ -244,6 +234,7 @@ function Setup({
             </select>
           </label>
         </div>
+        <DurationPicker id="timer" label="Tiempo por pregunta" value={s.timerOn ? s.timerSeconds : 0} onChange={(t) => (t ? updateSettings({ timerOn: true, timerSeconds: t }) : updateSettings({ timerOn: false }))} quick={[5, 10, 20, 30, 60, 300]} />
         <div className="chips">
           <label className="check">
             <input type="checkbox" checked={s.sound} onChange={(e) => updateSettings({ sound: e.target.checked })} />

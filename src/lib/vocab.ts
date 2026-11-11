@@ -64,3 +64,32 @@ export function parseWordList(text: string): { term: string; meaning?: string }[
       return m ? { term: m[1].trim(), meaning: m[2].trim() } : { term: l }
     })
 }
+
+/**
+ * Divide un texto en frases para leerlo en voz alta de a poco
+ * (así se puede pausar, retroceder y empezar desde cualquier frase).
+ * Las frases muy largas se cortan en comas, para que la voz no se trabe.
+ */
+export function splitSentences(text: string, maxLen = 220): string[] {
+  const out: string[] = []
+  for (const para of text.split(/\n+/)) {
+    const parts = para.match(/[^.!?…。！？]+(?:[.!?…。！？]+["'»”)\]]*|$)/gu) ?? []
+    for (const raw of parts) {
+      const s = raw.trim()
+      if (!s) continue
+      if (s.length <= maxLen) {
+        out.push(s)
+        continue
+      }
+      let chunk = ''
+      for (const piece of s.split(/(?<=[,;:])\s+/)) {
+        if (chunk && (chunk + ' ' + piece).length > maxLen) {
+          out.push(chunk)
+          chunk = piece
+        } else chunk = chunk ? `${chunk} ${piece}` : piece
+      }
+      if (chunk) out.push(chunk)
+    }
+  }
+  return out
+}

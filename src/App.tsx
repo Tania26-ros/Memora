@@ -19,6 +19,7 @@ const CompetePage = lazy(() => import('./pages/CompetePage'))
 const ReaderPage = lazy(() => import('./pages/ReaderPage'))
 const ListenPage = lazy(() => import('./pages/ListenPage'))
 const VocabPage = lazy(() => import('./pages/VocabPage'))
+const VocabListsPage = lazy(() => import('./pages/VocabListsPage'))
 const VocabPracticePage = lazy(() => import('./pages/VocabPracticePage'))
 const ProgressPage = lazy(() => import('./pages/ProgressPage'))
 const AccountPage = lazy(() => import('./pages/AccountPage'))
@@ -58,8 +59,10 @@ export default function App() {
           <Route path="/tema/:topicId/escuchar" element={<ListenPage />} />
           <Route path="/tema/:topicId/leer" element={<ReaderPage />} />
           <Route path="/tema/:topicId/competir" element={<CompetePage />} />
-          <Route path="/tema/:topicId/vocabulario" element={<VocabPage />} />
+          <Route path="/tema/:topicId/vocabulario" element={<VocabListsPage />} />
           <Route path="/tema/:topicId/vocabulario/practicar" element={<VocabPracticePage />} />
+          <Route path="/tema/:topicId/vocabulario/:listId" element={<VocabPage />} />
+          <Route path="/tema/:topicId/vocabulario/:listId/practicar" element={<VocabPracticePage />} />
           <Route path="/comunidad" element={<CommunityPage />} />
           <Route path="/comunidad/reto/:challengeId" element={<ChallengePage />} />
           <Route path="/progreso" element={<ProgressPage />} />

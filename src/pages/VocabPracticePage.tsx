@@ -22,8 +22,10 @@ const GRADE_TEXT: Record<Grade, string> = { correcto: '¡Correcto!', casi: '¡Ca
 // Practicar el vocabulario de un tema de cuatro formas.
 export default function VocabPracticePage() {
   const topicId = Number(useParams().topicId)
+  const listId = Number(useParams().listId) || null // sin listId: todos los vocabularios del tema
   const topic = useLiveQuery(() => db.topics.get(topicId), [topicId])
-  const words = useLiveQuery(() => db.words.where('topicId').equals(topicId).toArray(), [topicId])
+  const list = useLiveQuery(async () => (listId ? db.vocabLists.get(listId) : null), [listId])
+  const words = useLiveQuery(() => (listId ? db.words.where('listId').equals(listId).toArray() : db.words.where('topicId').equals(topicId).toArray()), [topicId, listId])
   const [mode, setMode] = useState<Mode | null>(null)
   const [round, setRound] = useState<Word[]>([])
   const [i, setI] = useState(0)
@@ -43,7 +45,7 @@ export default function VocabPracticePage() {
   return (
     <section className="practice">
       <nav className="crumbs">
-        <Link to={`/tema/${topicId}/vocabulario`}>← Vocabulario</Link>
+        <Link to={listId ? `/tema/${topicId}/vocabulario/${listId}` : `/tema/${topicId}/vocabulario`}>← {list?.name ?? 'Vocabularios'}</Link>
       </nav>
       {!mode && (
         <>

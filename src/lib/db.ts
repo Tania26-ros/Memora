@@ -46,10 +46,28 @@ export interface StudyFile {
   createdAt: number
 }
 
+/** Un vocabulario: un tema puede tener varios (por ejemplo, uno por lectura o canción). */
+export interface VocabList {
+  id: number
+  topicId: number
+  name: string
+  /** Texto, letra o transcripción para sombrear palabras y escuchar. */
+  text: string
+  /** Idioma del texto ('auto' = adivinarlo). */
+  lang: string
+  /** Frase donde se quedó la lectura en voz alta. */
+  position?: number
+  /** Si llegó compartido por otra persona: su nombre. */
+  from?: string
+  createdAt: number
+}
+
 /** Palabra o frase del vocabulario de un tema. */
 export interface Word {
   id: number
   topicId: number
+  /** A qué vocabulario del tema pertenece. */
+  listId: number
   term: string
   meaning?: string
   synonyms?: string
@@ -86,6 +104,7 @@ export class MemoraDB extends Dexie {
   reviews!: EntityTable<ReviewState, 'questionId'>
   days!: EntityTable<DayActivity, 'date'>
   words!: EntityTable<Word, 'id'>
+  vocabLists!: EntityTable<VocabList, 'id'>
 
   constructor(name = 'memora') {
     super(name)
@@ -111,6 +130,60 @@ export class MemoraDB extends Dexie {
     this.version(4).stores({
       words: '++id, topicId, createdAt',
     })
+    // Versión 5: varios vocabularios por tema. Las palabras que ya existían
+    // pasan a un vocabulario llamado «Vocabulario» (con el texto que tenían).
+    this.version(5)
+      .stores({
+        vocabLists: '++id, topicId, createdAt',
+        words: '++id, topicId, listId, createdAt',
+      })
+      .upgrade(async (tx) => {
+        const topicIds = new Set<number>([...(await tx.table('words').toArray()).map((w: Word) => w.topicId), ...legacyTextTopics()])
+        for (const topicId of topicIds) {
+          const listId = await tx.table('vocabLists').add({ topicId, name: 'Vocabulario', text: legacyText(topicId), lang: 'auto', createdAt: Date.now() })
+          await tx.table('words').where('topicId').equals(topicId).modify({ listId })
+        }
+      })
+  }
+}
+
+/** Las palabras sin vocabulario (de copias antiguas) pasan a uno llamado «Vocabulario». */
+export async function ensureVocabLists(database: MemoraDB = db) {
+  const loose = (await database.words.toArray()).filter((w) => !w.listId)
+  for (const topicId of new Set(loose.map((w) => w.topicId))) {
+    const listId = await database.vocabLists.add({ topicId, name: 'Vocabulario', text: '', lang: 'auto', createdAt: Date.now() })
+    await database.words.bulkUpdate(loose.filter((w) => w.topicId === topicId).map((w) => ({ key: w.id, changes: { listId } })))
+  }
+}
+
+export async function createVocabList(topicId: number, name: string, database: MemoraDB = db, extra: Partial<VocabList> = {}) {
+  return database.vocabLists.add({ topicId, name: name.trim() || 'Vocabulario', text: '', lang: 'auto', createdAt: Date.now(), ...extra })
+}
+
+/** Borra un vocabulario con sus palabras. */
+export async function deleteVocabList(listId: number, database: MemoraDB = db) {
+  await database.transaction('rw', [database.vocabLists, database.words], async () => {
+    await database.words.where('listId').equals(listId).delete()
+    await database.vocabLists.delete(listId)
+  })
+}
+
+// Antes el texto del vocabulario se guardaba aparte (localStorage), uno por tema.
+function legacyTextTopics(): number[] {
+  try {
+    return Object.keys(localStorage)
+      .map((k) => /^memora-texto-(\d+)$/.exec(k)?.[1])
+      .filter((x): x is string => !!x && !!localStorage.getItem(`memora-texto-${x}`)?.trim())
+      .map(Number)
+  } catch {
+    return []
+  }
+}
+function legacyText(topicId: number) {
+  try {
+    return localStorage.getItem(`memora-texto-${topicId}`) ?? ''
+  } catch {
+    return ''
   }
 }
 
@@ -172,6 +245,7 @@ export interface Snapshot {
   questions: Question[]
   reviews: ReviewState[]
   words: Word[]
+  vocabLists?: VocabList[]
 }
 
 export async function snapshotNotebook(notebookId: number, database: MemoraDB = db): Promise<Snapshot> {
@@ -182,7 +256,8 @@ export async function snapshotNotebook(notebookId: number, database: MemoraDB = 
   const questions = await database.questions.where('topicId').anyOf(ids).toArray()
   const reviews = await database.reviews.where('topicId').anyOf(ids).toArray()
   const words = await database.words.where('topicId').anyOf(ids).toArray()
-  return { notebooks: notebook ? [notebook] : [], topics, files, questions, reviews, words }
+  const vocabLists = await database.vocabLists.where('topicId').anyOf(ids).toArray()
+  return { notebooks: notebook ? [notebook] : [], topics, files, questions, reviews, words, vocabLists }
 }
 
 export async function snapshotTopic(topicId: number, database: MemoraDB = db): Promise<Snapshot> {
@@ -191,25 +266,28 @@ export async function snapshotTopic(topicId: number, database: MemoraDB = db): P
   const questions = await database.questions.where('topicId').equals(topicId).toArray()
   const reviews = await database.reviews.where('topicId').equals(topicId).toArray()
   const words = await database.words.where('topicId').equals(topicId).toArray()
-  return { notebooks: [], topics: topic ? [topic] : [], files, questions, reviews, words }
+  const vocabLists = await database.vocabLists.where('topicId').equals(topicId).toArray()
+  return { notebooks: [], topics: topic ? [topic] : [], files, questions, reviews, words, vocabLists }
 }
 
 export async function restoreSnapshot(s: Snapshot, database: MemoraDB = db) {
-  await database.transaction('rw', [database.notebooks, database.topics, database.files, database.questions, database.reviews, database.words], async () => {
+  await database.transaction('rw', [database.notebooks, database.topics, database.files, database.questions, database.reviews, database.words, database.vocabLists], async () => {
     await database.notebooks.bulkPut(s.notebooks)
     await database.topics.bulkPut(s.topics)
     await database.files.bulkPut(s.files)
     await database.questions.bulkPut(s.questions)
     await database.reviews.bulkPut(s.reviews)
     await database.words.bulkPut(s.words ?? [])
+    await database.vocabLists.bulkPut(s.vocabLists ?? [])
   })
 }
 
 /** Borra un tema y todos sus archivos. La "transacción" asegura que se borre todo o nada. */
 export async function deleteTopic(topicId: number, database: MemoraDB = db) {
-  await database.transaction('rw', [database.topics, database.files, database.questions, database.reviews, database.words], async () => {
+  await database.transaction('rw', [database.topics, database.files, database.questions, database.reviews, database.words, database.vocabLists], async () => {
     await database.files.where('topicId').equals(topicId).delete()
     await database.words.where('topicId').equals(topicId).delete()
+    await database.vocabLists.where('topicId').equals(topicId).delete()
     await database.questions.where('topicId').equals(topicId).delete()
     await database.reviews.where('topicId').equals(topicId).delete()
     await database.topics.delete(topicId)
@@ -218,9 +296,10 @@ export async function deleteTopic(topicId: number, database: MemoraDB = db) {
 
 /** Borra un cuaderno con todos sus temas y archivos. */
 export async function deleteNotebook(notebookId: number, database: MemoraDB = db) {
-  await database.transaction('rw', [database.notebooks, database.topics, database.files, database.questions, database.reviews, database.words], async () => {
+  await database.transaction('rw', [database.notebooks, database.topics, database.files, database.questions, database.reviews, database.words, database.vocabLists], async () => {
     const topicIds = await database.topics.where('notebookId').equals(notebookId).primaryKeys()
     await database.words.where('topicId').anyOf(topicIds).delete()
+    await database.vocabLists.where('topicId').anyOf(topicIds).delete()
     await database.files.where('topicId').anyOf(topicIds).delete()
     await database.questions.where('topicId').anyOf(topicIds).delete()
     await database.reviews.where('topicId').anyOf(topicIds).delete()

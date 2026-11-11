@@ -48,20 +48,77 @@ export function detectLang(text: string, fallback = 'es-ES'): string {
 // ── Leer en voz alta ─────────────────────────────────────────
 export const canSpeak = () => typeof window !== 'undefined' && 'speechSynthesis' in window
 
-function pickVoice(lang: string) {
+const baseOf = (lang: string) => lang.replace('_', '-').split('-')[0].toLowerCase()
+
+function pickVoice(lang: string, voiceURI?: string) {
   const voices = speechSynthesis.getVoices()
-  const base = lang.split('-')[0]
-  return voices.find((v) => v.lang === lang) ?? voices.find((v) => v.lang.replace('_', '-').startsWith(base))
+  const base = baseOf(lang)
+  const chosen = voiceURI ? voices.find((v) => v.voiceURI === voiceURI && baseOf(v.lang) === base) : undefined
+  return chosen ?? voices.find((v) => v.lang === lang) ?? voices.find((v) => baseOf(v.lang) === base)
+}
+
+// ── Voces y estilos ──────────────────────────────────────────
+// Las voces son las que trae el celular (gratis). Cada marca trae otras:
+// en iPhone suele haber varias por idioma; en Android, «Ajustes → Texto a voz».
+
+const FEMALE = /female|mujer|woman|femenin|paulina|m[oó]nica|helena|laura|sabina|samantha|karen|victoria|zira|susan|hazel|luciana|joana|am[eé]lie|alice|anna|elsa|ellen|kyoko|yuna|ting|ioana|sara|paola|elena|luc[ií]a|lupe|pen[eé]lope|conchita|esperanza|marisol|isabela|francisca|catalina|valentina|tessa|moira|fiona|veena|karen|serena|allison|ava|nora|kate|flo|grandma|sandy|shelley|dalia|elvira|ximena|camila|sof[ií]a/i
+const MALE = /\bmale\b|hombre|\bman\b|masculin|jorge|juan|diego|carlos|daniel|alex\b|fred|thomas|david|mark|george|pablo|ra[uú]l|enrique|miguel|andr[eé]s|luca|reed|rocko|eddy|grandpa|aaron|arthur|gordon|oliver|rishi|tom\b|alvaro|jorge|antonio|gonzalo|tom[aá]s/i
+
+export type VoiceGender = 'femenina' | 'masculina' | null
+
+/** Adivina por el nombre si la voz es femenina o masculina (no siempre se puede). */
+export function voiceGender(name: string): VoiceGender {
+  if (MALE.test(name) && !/female/i.test(name)) return 'masculina'
+  if (FEMALE.test(name)) return 'femenina'
+  return null
+}
+
+export interface VoiceOption {
+  uri: string
+  label: string
+  gender: VoiceGender
+}
+
+/** Voces instaladas para un idioma, con un nombre fácil de leer. */
+export function voicesFor(lang: string, all: Pick<SpeechSynthesisVoice, 'voiceURI' | 'name' | 'lang' | 'localService'>[] = canSpeak() ? speechSynthesis.getVoices() : []): VoiceOption[] {
+  const base = baseOf(lang)
+  return all
+    .filter((v) => baseOf(v.lang) === base)
+    .sort((a, b) => Number(b.localService) - Number(a.localService) || a.name.localeCompare(b.name))
+    .map((v, i) => {
+      const gender = voiceGender(v.name)
+      const name = v.name.replace(/^(Microsoft|Google|Apple)\s+/, '').replace(/\s*\(.*?\)\s*/g, ' ').trim()
+      const pretty = /^[a-z]{2}-[a-z]{2}-x-/i.test(name) ? `Voz ${i + 1}` : name
+      return { uri: v.voiceURI, label: `${pretty}${gender ? ` · ${gender}` : ''}${v.localService ? '' : ' · con internet'}`, gender }
+    })
+}
+
+export type VoiceStyle = 'normal' | 'alegre' | 'serio' | 'calmado' | 'grave' | 'aguda'
+/** Los estilos cambian el tono y el ritmo de la voz del celular. */
+export const VOICE_STYLES: { id: VoiceStyle; label: string; pitch: number; rate: number }[] = [
+  { id: 'normal', label: 'Normal', pitch: 1, rate: 1 },
+  { id: 'alegre', label: 'Alegre', pitch: 1.35, rate: 1.08 },
+  { id: 'serio', label: 'Serio', pitch: 0.75, rate: 0.93 },
+  { id: 'calmado', label: 'Calmado', pitch: 0.95, rate: 0.85 },
+  { id: 'grave', label: 'Grave', pitch: 0.5, rate: 1 },
+  { id: 'aguda', label: 'Aguda', pitch: 1.7, rate: 1 },
+]
+
+export interface SpeakOptions {
+  voiceURI?: string
+  style?: VoiceStyle
 }
 
 /** Lee el texto. Devuelve una promesa que termina cuando acaba de hablar (o se detiene). */
-export function speak(text: string, lang: string, rate = 1): Promise<void> {
+export function speak(text: string, lang: string, rate = 1, opts: SpeakOptions = {}): Promise<void> {
   if (!canSpeak() || !text.trim()) return Promise.resolve()
   return new Promise((resolve) => {
     const u = new SpeechSynthesisUtterance(text)
+    const style = VOICE_STYLES.find((s) => s.id === opts.style) ?? VOICE_STYLES[0]
     u.lang = lang
-    u.rate = rate
-    const voice = pickVoice(lang)
+    u.rate = Math.min(4, Math.max(0.3, rate * style.rate))
+    u.pitch = style.pitch
+    const voice = pickVoice(lang, opts.voiceURI)
     if (voice) u.voice = voice
     u.onend = () => resolve()
     u.onerror = () => resolve()
