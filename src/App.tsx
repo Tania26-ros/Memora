@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
 import InstallButton from './components/InstallButton'
+import StatsChips from './components/StatsChips'
 import StorageInfo from './components/StorageInfo'
 import UndoToast from './components/UndoToast'
 import HomePage from './pages/HomePage'
@@ -12,6 +13,16 @@ const TopicPage = lazy(() => import('./pages/TopicPage'))
 const QuestionsPage = lazy(() => import('./pages/QuestionsPage'))
 const PracticePage = lazy(() => import('./pages/PracticePage'))
 const ImportPage = lazy(() => import('./pages/ImportPage'))
+const CommunityPage = lazy(() => import('./pages/CommunityPage'))
+const ChallengePage = lazy(() => import('./pages/ChallengePage'))
+const CompetePage = lazy(() => import('./pages/CompetePage'))
+const ReaderPage = lazy(() => import('./pages/ReaderPage'))
+const ListenPage = lazy(() => import('./pages/ListenPage'))
+const VocabPage = lazy(() => import('./pages/VocabPage'))
+const VocabPracticePage = lazy(() => import('./pages/VocabPracticePage'))
+const ProgressPage = lazy(() => import('./pages/ProgressPage'))
+const AccountPage = lazy(() => import('./pages/AccountPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
 // Estructura general: encabezado, la página actual y pie.
 // <Routes> elige qué página mostrar según la dirección.
@@ -23,7 +34,16 @@ export default function App() {
           <img src="/favicon.svg" alt="" width={28} height={28} />
           <span>Memora</span>
         </Link>
-        <InstallButton />
+        <div className="topbar-right">
+          <InstallButton />
+          <StatsChips />
+          <Link to="/comunidad" className="icon-btn" aria-label="Comunidad">
+            🌐
+          </Link>
+          <Link to="/ajustes" className="icon-btn" aria-label="Ajustes">
+            ⚙️
+          </Link>
+        </div>
       </header>
 
       <main className="content">
@@ -35,6 +55,16 @@ export default function App() {
           <Route path="/tema/:topicId/preguntas" element={<QuestionsPage />} />
           <Route path="/tema/:topicId/jugar" element={<PracticePage />} />
           <Route path="/tema/:topicId/pegar" element={<ImportPage />} />
+          <Route path="/tema/:topicId/escuchar" element={<ListenPage />} />
+          <Route path="/tema/:topicId/leer" element={<ReaderPage />} />
+          <Route path="/tema/:topicId/competir" element={<CompetePage />} />
+          <Route path="/tema/:topicId/vocabulario" element={<VocabPage />} />
+          <Route path="/tema/:topicId/vocabulario/practicar" element={<VocabPracticePage />} />
+          <Route path="/comunidad" element={<CommunityPage />} />
+          <Route path="/comunidad/reto/:challengeId" element={<ChallengePage />} />
+          <Route path="/progreso" element={<ProgressPage />} />
+          <Route path="/ajustes" element={<SettingsPage />} />
+          <Route path="/cuenta" element={<AccountPage />} />
           <Route path="*" element={<p className="empty">Esta página no existe. <Link to="/">Volver al inicio</Link></p>} />
         </Routes>
         </Suspense>

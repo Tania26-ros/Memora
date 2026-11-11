@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Question } from './questions'
+import type { DayActivity } from './progress'
 import type { ReviewState } from './srs'
 import { makeThumbnail } from './thumbnail'
 
@@ -45,6 +46,23 @@ export interface StudyFile {
   createdAt: number
 }
 
+/** Palabra o frase del vocabulario de un tema. */
+export interface Word {
+  id: number
+  topicId: number
+  term: string
+  meaning?: string
+  synonyms?: string
+  antonyms?: string
+  /** Frase donde apareció o un ejemplo de uso. */
+  example?: string
+  notes?: string
+  hint?: string
+  /** Idioma de la palabra (para leerla y escucharla bien). */
+  lang: string
+  createdAt: number
+}
+
 export const FILE_KINDS: { value: FileKind; label: string; hint: string }[] = [
   { value: 'material', label: 'Material diverso', hint: 'Apuntes, diapositivas, libros' },
   { value: 'lectura-idioma', label: 'Lectura en otro idioma', hint: 'Para vocabulario y audio' },
@@ -66,6 +84,8 @@ export class MemoraDB extends Dexie {
   files!: EntityTable<StudyFile, 'id'>
   questions!: EntityTable<Question, 'id'>
   reviews!: EntityTable<ReviewState, 'questionId'>
+  days!: EntityTable<DayActivity, 'date'>
+  words!: EntityTable<Word, 'id'>
 
   constructor(name = 'memora') {
     super(name)
@@ -82,6 +102,14 @@ export class MemoraDB extends Dexie {
     this.version(2).stores({
       questions: '++id, topicId, type, createdAt',
       reviews: 'questionId, topicId, due',
+    })
+    // Versión 3 (etapa 2, parte 3): lo que estudias cada día (puntos y rachas).
+    this.version(3).stores({
+      days: 'date',
+    })
+    // Versión 4 (etapa 3): vocabulario de cada tema.
+    this.version(4).stores({
+      words: '++id, topicId, createdAt',
     })
   }
 }
@@ -143,6 +171,7 @@ export interface Snapshot {
   files: StudyFile[]
   questions: Question[]
   reviews: ReviewState[]
+  words: Word[]
 }
 
 export async function snapshotNotebook(notebookId: number, database: MemoraDB = db): Promise<Snapshot> {
@@ -152,7 +181,8 @@ export async function snapshotNotebook(notebookId: number, database: MemoraDB = 
   const files = await database.files.where('topicId').anyOf(ids).toArray()
   const questions = await database.questions.where('topicId').anyOf(ids).toArray()
   const reviews = await database.reviews.where('topicId').anyOf(ids).toArray()
-  return { notebooks: notebook ? [notebook] : [], topics, files, questions, reviews }
+  const words = await database.words.where('topicId').anyOf(ids).toArray()
+  return { notebooks: notebook ? [notebook] : [], topics, files, questions, reviews, words }
 }
 
 export async function snapshotTopic(topicId: number, database: MemoraDB = db): Promise<Snapshot> {
@@ -160,23 +190,26 @@ export async function snapshotTopic(topicId: number, database: MemoraDB = db): P
   const files = await database.files.where('topicId').equals(topicId).toArray()
   const questions = await database.questions.where('topicId').equals(topicId).toArray()
   const reviews = await database.reviews.where('topicId').equals(topicId).toArray()
-  return { notebooks: [], topics: topic ? [topic] : [], files, questions, reviews }
+  const words = await database.words.where('topicId').equals(topicId).toArray()
+  return { notebooks: [], topics: topic ? [topic] : [], files, questions, reviews, words }
 }
 
 export async function restoreSnapshot(s: Snapshot, database: MemoraDB = db) {
-  await database.transaction('rw', [database.notebooks, database.topics, database.files, database.questions, database.reviews], async () => {
+  await database.transaction('rw', [database.notebooks, database.topics, database.files, database.questions, database.reviews, database.words], async () => {
     await database.notebooks.bulkPut(s.notebooks)
     await database.topics.bulkPut(s.topics)
     await database.files.bulkPut(s.files)
     await database.questions.bulkPut(s.questions)
     await database.reviews.bulkPut(s.reviews)
+    await database.words.bulkPut(s.words ?? [])
   })
 }
 
 /** Borra un tema y todos sus archivos. La "transacción" asegura que se borre todo o nada. */
 export async function deleteTopic(topicId: number, database: MemoraDB = db) {
-  await database.transaction('rw', [database.topics, database.files, database.questions, database.reviews], async () => {
+  await database.transaction('rw', [database.topics, database.files, database.questions, database.reviews, database.words], async () => {
     await database.files.where('topicId').equals(topicId).delete()
+    await database.words.where('topicId').equals(topicId).delete()
     await database.questions.where('topicId').equals(topicId).delete()
     await database.reviews.where('topicId').equals(topicId).delete()
     await database.topics.delete(topicId)
@@ -185,8 +218,9 @@ export async function deleteTopic(topicId: number, database: MemoraDB = db) {
 
 /** Borra un cuaderno con todos sus temas y archivos. */
 export async function deleteNotebook(notebookId: number, database: MemoraDB = db) {
-  await database.transaction('rw', [database.notebooks, database.topics, database.files, database.questions, database.reviews], async () => {
+  await database.transaction('rw', [database.notebooks, database.topics, database.files, database.questions, database.reviews, database.words], async () => {
     const topicIds = await database.topics.where('notebookId').equals(notebookId).primaryKeys()
+    await database.words.where('topicId').anyOf(topicIds).delete()
     await database.files.where('topicId').anyOf(topicIds).delete()
     await database.questions.where('topicId').anyOf(topicIds).delete()
     await database.reviews.where('topicId').anyOf(topicIds).delete()

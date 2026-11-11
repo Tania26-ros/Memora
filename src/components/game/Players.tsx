@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { MicButton } from '../Voice'
+import { matchSpokenOption } from '../../lib/speech'
 import {
   LETTERS, checkClassify, checkCloze, checkMatch, checkOrder, classifyItems, clozeSegments, shuffle,
   type ClassifyQuestion, type ClozeQuestion, type MatchQuestion, type McqQuestion, type OpenQuestion, type OrderQuestion, type Question, type TfQuestion,
@@ -12,6 +14,8 @@ interface Props<Q> {
   q: Q
   answered: boolean
   mix: boolean
+  /** Idioma para responder hablando. */
+  lang: string
   onAnswer: (correct: boolean) => void
 }
 
@@ -140,7 +144,7 @@ function ClassifyPlayer({ q, answered, onAnswer }: Props<ClassifyQuestion>) {
   )
 }
 
-function McqPlayer({ q, answered, mix, onAnswer }: Props<McqQuestion>) {
+function McqPlayer({ q, answered, mix, lang, onAnswer }: Props<McqQuestion>) {
   // Orden de las alternativas: como en el archivo, o mezcladas si así se eligió.
   const order = useMemo(() => (mix ? shuffle(q.options.map((_, i) => i)) : q.options.map((_, i) => i)), [q, mix])
   const [picked, setPicked] = useState<number | null>(null)
@@ -179,12 +183,28 @@ function McqPlayer({ q, answered, mix, onAnswer }: Props<McqQuestion>) {
           </div>
         )
       })}
-      {!answered && <p className="muted hint">Toca ✕ para descartar las alternativas que sabes que no son.</p>}
+      {!answered && (
+        <div className="voice-row">
+          <p className="muted hint">Toca ✕ para descartar las alternativas que sabes que no son.</p>
+          <MicButton
+            lang={lang}
+            label="Decir la respuesta"
+            onResult={(alts) => {
+              // Puedes decir la letra («la be») o el texto de la alternativa.
+              const shownTexts = order.map((i) => q.options[i])
+              const pos = matchSpokenOption(alts, shownTexts)
+              if (pos === null) return `Entendí «${alts[0]}», pero no coincide con ninguna alternativa. Inténtalo otra vez o toca tu respuesta.`
+              setPicked(order[pos])
+              onAnswer(order[pos] === q.correct)
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
 
-function TfPlayer({ q, answered, onAnswer }: Props<TfQuestion>) {
+function TfPlayer({ q, answered, lang, onAnswer }: Props<TfQuestion>) {
   const [picked, setPicked] = useState<boolean | null>(null)
   return (
     <div className="tf-row">
@@ -204,6 +224,18 @@ function TfPlayer({ q, answered, onAnswer }: Props<TfQuestion>) {
           </button>
         )
       })}
+      {!answered && (
+        <MicButton
+          lang={lang}
+          label="Decir verdadero o falso"
+          onResult={(alts) => {
+            const pos = matchSpokenOption(alts, lang.startsWith('en') ? ['True', 'False'] : ['Verdadero', 'Falso'])
+            if (pos === null) return `Entendí «${alts[0]}». Di «verdadero» o «falso», o toca tu respuesta.`
+            setPicked(pos === 0)
+            onAnswer((pos === 0) === q.correct)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -316,13 +348,14 @@ function ClozePlayer({ q, answered, onAnswer }: Props<ClozeQuestion>) {
   )
 }
 
-function OpenPlayer({ q, answered, onAnswer }: Props<OpenQuestion>) {
+function OpenPlayer({ q, answered, lang, onAnswer }: Props<OpenQuestion>) {
   const [draft, setDraft] = useState('')
   const [revealed, setRevealed] = useState(false)
   const show = revealed || answered
   return (
     <div className="open">
       <textarea className="input textarea" rows={3} placeholder="Escribe tu respuesta (opcional) y luego compárala" value={draft} onChange={(e) => setDraft(e.target.value)} disabled={answered} aria-label="Tu respuesta" />
+      {!show && <MicButton lang={lang} label="Dictar mi respuesta" onResult={(alts) => setDraft((d) => (d ? `${d} ${alts[0]}` : alts[0]))} />}
       {!show ? (
         <button className="btn" onClick={() => setRevealed(true)}>
           Ver respuesta
