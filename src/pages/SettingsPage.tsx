@@ -111,6 +111,7 @@ export default function SettingsPage() {
               ['animations', 'Animaciones (confeti y lluvia)'],
               ['vibration', 'Vibración'],
               ['hints', 'Mostrar pistas'],
+              ['mascot', 'Mostrar a Memo, la mascota'],
             ] as const
           ).map(([key, label]) => (
             <label key={key} className="check">

@@ -2,9 +2,13 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import EditNotebookDialog from '../components/EditNotebookDialog'
+import MascotBubble from '../components/Mascot'
 import NotebookForm from '../components/NotebookForm'
 import { deleteNotebookWithUndo } from '../lib/actions'
 import { createNotebook, db, type Notebook } from '../lib/db'
+import { homeState } from '../lib/guide'
+import { homeLine } from '../lib/mascot'
+import { useSettings } from '../lib/settings'
 
 // Página de inicio: tus cuadernos.
 // useLiveQuery vuelve a leer la base de datos cada vez que algo cambia,
@@ -17,6 +21,9 @@ export default function HomePage() {
     for (const k of keys) counts.set(k as number, (counts.get(k as number) ?? 0) + 1)
     return counts
   }, [])
+  // Consejo de Memo según lo que toca hoy (repasos, meta, racha).
+  const { dailyGoal } = useSettings()
+  const guide = useLiveQuery(() => homeState(dailyGoal), [dailyGoal])
   // null = ventana cerrada; 'nuevo' = crear; un cuaderno = editarlo.
   const [dialog, setDialog] = useState<Notebook | 'nuevo' | null>(null)
 
@@ -33,6 +40,7 @@ export default function HomePage() {
         )}
       </div>
       <p className="lead">Un cuaderno por curso. Dentro, un tema por cada unidad o capítulo.</p>
+      {guide && <MascotBubble line={homeLine(guide)} />}
 
       {notebooks.length === 0 ? (
         // La primera vez mostramos el formulario directamente.
