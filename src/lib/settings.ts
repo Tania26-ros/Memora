@@ -28,6 +28,8 @@ export interface Settings {
   readerScale: number
   paper: PaperId
   readerSpacing: number
+  /** Mostrar a Memo, la mascota que guía y anima. */
+  mascot: boolean
 }
 
 export type PaperId = 'blanco' | 'crema' | 'sepia' | 'noche'
@@ -83,6 +85,7 @@ export const DEFAULT_SETTINGS: Settings = {
   readerScale: 1.2,
   paper: 'crema',
   readerSpacing: 1.7,
+  mascot: true,
 }
 
 export const VOICE_RATES = [

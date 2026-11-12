@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import Player from '../components/game/Players'
 import TimerBar from '../components/game/TimerBar'
+import MascotBubble from '../components/Mascot'
 import { SpeakButton } from '../components/Voice'
+import { answerLine, resultsLine, type MascotLine } from '../lib/mascot'
 import { langFor, questionSpeech, say } from '../lib/voice'
 import { stopSpeaking } from '../lib/speech'
 import { confetti, playCorrect, playWrong, rain, vibrate } from '../lib/effects'
@@ -317,6 +319,7 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
   const [hintRound, setHintRound] = useState(-1) // en qué ronda se pidió la pista
   const [xp, setXp] = useState(0) // puntos ganados en esta dosis
   const [lastPts, setLastPts] = useState(0)
+  const [memo, setMemo] = useState<MascotLine | null>(null) // lo que dice Memo tras responder
 
   const qid = currentQid(session)
   const q = qid !== undefined ? byId.get(qid) : undefined
@@ -339,6 +342,7 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
     const pts = pointsFor({ difficulty: q.difficulty, correct, retry: seenBefore, hint: hintRound === round, streak: correct ? streak + 1 : 0 })
     setXp(xp + pts)
     setLastPts(pts)
+    setMemo(answerLine(correct ? 'ok' : timeout ? 'timeout' : 'fail', correct ? streak + 1 : 0))
     void recordActivity(pts, correct)
     if (correct) {
       const n = streak + 1
@@ -409,6 +413,7 @@ function Game({ ids, byId, dose, total, onFinish }: { ids: number[]; byId: Map<n
           {result !== 'ok' && <p>Respuesta correcta: {correctAnswerText(q)}</p>}
           {q.explanation && <p>{q.explanation}</p>}
           {result !== 'ok' && <p className="muted">Esta pregunta volverá al final de la ronda.</p>}
+          {memo && <MascotBubble compact size={44} line={memo} />}
           <button className="btn btn-block" autoFocus onClick={next}>
             Siguiente
           </button>
@@ -443,6 +448,7 @@ function Results({
         <p className="results-big">{pct}%</p>
         <h1>{pct === 100 ? '¡Perfecto!' : pct >= 70 ? '¡Muy bien!' : 'Sigue practicando'}</h1>
         <p className="results-xp">+{xp} puntos</p>
+        <MascotBubble line={resultsLine(pct, r.failed.length)} />
         {now && before && now.level > before.level && (
           <p className="level-up" role="status">
             🎉 ¡Subiste al nivel {now.level}: {now.name}!
