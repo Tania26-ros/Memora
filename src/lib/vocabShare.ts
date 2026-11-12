@@ -17,6 +17,8 @@ export interface SharedVocab {
   from: string
   lang: string
   text: string
+  /** Fuente del texto, para dar crédito a quien lo creó. */
+  source?: string
   words: SharedWord[]
 }
 
@@ -28,6 +30,7 @@ export function toShared(list: VocabList, words: Word[], from: string): SharedVo
     from,
     lang: list.lang,
     text: list.text,
+    source: list.source || undefined,
     words: words.map(({ term, meaning, synonyms, antonyms, example, notes, hint, lang }) => ({ term, meaning, synonyms, antonyms, example, notes, hint, lang })),
   }
 }
@@ -43,13 +46,13 @@ export function parseShared(raw: string): SharedVocab {
   if (data?.app !== 'memora-vocabulario' || !Array.isArray(data.words)) throw new Error('Este archivo no es un vocabulario de Memora.')
   if (data.version !== 1) throw new Error('Este vocabulario es de una versión más nueva de Memora. Actualiza la app.')
   const words = data.words.filter((w) => typeof w?.term === 'string' && w.term.trim()).slice(0, 5000)
-  return { app: 'memora-vocabulario', version: 1, name: String(data.name || 'Vocabulario').slice(0, 80), from: String(data.from || '').slice(0, 40), lang: String(data.lang || 'auto'), text: String(data.text || '').slice(0, 500_000), words }
+  return { app: 'memora-vocabulario', version: 1, name: String(data.name || 'Vocabulario').slice(0, 80), from: String(data.from || '').slice(0, 40), lang: String(data.lang || 'auto'), text: String(data.text || '').slice(0, 500_000), source: data.source ? String(data.source).slice(0, 500) : undefined, words }
 }
 
 /** Guarda en el tema un vocabulario recibido. Devuelve el id del nuevo vocabulario. */
 export async function importShared(v: SharedVocab, topicId: number, database: MemoraDB = db, now = Date.now()) {
   return database.transaction('rw', [database.vocabLists, database.words], async () => {
-    const listId = await database.vocabLists.add({ topicId, name: v.name, text: v.text, lang: v.lang, from: v.from || undefined, createdAt: now })
+    const listId = await database.vocabLists.add({ topicId, name: v.name, text: v.text, lang: v.lang, from: v.from || undefined, source: v.source || undefined, createdAt: now })
     await database.words.bulkAdd(v.words.map((w, i) => ({ ...w, term: w.term.trim(), lang: w.lang || 'en-US', topicId, listId, createdAt: now + i })) as Word[])
     return listId
   })

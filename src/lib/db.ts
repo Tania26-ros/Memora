@@ -43,6 +43,8 @@ export interface StudyFile {
   blob: Blob
   /** Miniatura pequeña para las imágenes (ver thumbnail.ts). */
   thumb?: Blob
+  /** De dónde salió (autor, libro, canal, enlace…), para dar crédito. */
+  source?: string
   createdAt: number
 }
 
@@ -59,6 +61,8 @@ export interface VocabList {
   position?: number
   /** Si llegó compartido por otra persona: su nombre. */
   from?: string
+  /** De dónde salió el texto (autor, libro, canal, enlace…), para dar crédito. */
+  source?: string
   createdAt: number
 }
 

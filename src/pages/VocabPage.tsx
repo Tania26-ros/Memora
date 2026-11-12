@@ -1,6 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import CopyButton from '../components/CopyButton'
+import SourceCredit from '../components/SourceCredit'
 import TextReader from '../components/TextReader'
 import { MicButton, SpeakButton } from '../components/Voice'
 import WordEditor, { type WordDraft } from '../components/WordEditor'
@@ -69,6 +71,9 @@ export default function VocabPage() {
   }
 
   if (!topic || !list || !words) return null
+
+  // Crédito a quien creó el texto: solo ocupa espacio si se agrega.
+  const source = <SourceCredit source={list.source} onSave={(v) => void db.vocabLists.update(listId, { source: v })} />
 
   const rename = async () => {
     const name = prompt('Nuevo nombre del vocabulario', list.name)?.trim()
@@ -161,6 +166,7 @@ export default function VocabPage() {
                 <span>Texto, letra de canción o transcripción</span>
                 <textarea id="vocab-text" className="input textarea" rows={8} value={current} onChange={(e) => setText(e.target.value)} placeholder="Pega aquí el texto…" />
               </label>
+              {source}
               <label className="field" htmlFor="text-lang">
                 <span>Idioma del texto</span>
                 <select id="text-lang" className="input" value={list.lang} onChange={(e) => void db.vocabLists.update(listId, { lang: e.target.value })}>
@@ -178,7 +184,7 @@ export default function VocabPage() {
             </>
           ) : (
             <>
-              <TextReader key={current} text={current} lang={lang} startAt={list.position ?? 0} onPosition={(i) => void db.vocabLists.update(listId, { position: i })} />
+              <TextReader key={current} text={current} lang={lang} startAt={list.position ?? 0} onPosition={(i) => void db.vocabLists.update(listId, { position: i })} below={source} />
               <div className="card-actions">
                 <button className="btn btn-small btn-ghost" onClick={() => setEditingText(true)}>
                   ✎ Editar el texto
@@ -223,6 +229,7 @@ export default function VocabPage() {
                       Guardar «{phrase(tokens, pick.a, pick.b)}»
                     </button>
                     <SpeakButton text={phrase(tokens, pick.a, pick.b)} lang={lang} />
+                    <CopyButton text={phrase(tokens, pick.a, pick.b)} />
                     <button className="btn btn-small btn-ghost" onClick={() => setPick(null)}>
                       Cancelar
                     </button>
@@ -231,6 +238,7 @@ export default function VocabPage() {
                   <span className="muted">Toca una palabra del texto para guardarla.</span>
                 )}
               </div>
+              {source}
             </>
           )}
         </div>

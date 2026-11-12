@@ -3,7 +3,7 @@ import { expect, it } from 'vitest'
 import { MemoraDB, type VocabList, type Word } from './db'
 import { importShared, parseShared, toShared } from './vocabShare'
 
-const list: VocabList = { id: 9, topicId: 1, name: 'Imagine', text: 'Imagine all the people', lang: 'en-US', createdAt: 1 }
+const list: VocabList = { id: 9, topicId: 1, name: 'Imagine', text: 'Imagine all the people', lang: 'en-US', source: 'John Lennon, «Imagine» (1971)', createdAt: 1 }
 const words = [
   { id: 1, topicId: 1, listId: 9, term: 'people', meaning: 'gente', lang: 'en-US', createdAt: 1 },
   { id: 2, topicId: 1, listId: 9, term: 'imagine', meaning: 'imaginar', notes: 'verbo', lang: 'en-US', createdAt: 2 },
@@ -15,7 +15,7 @@ it('un vocabulario compartido viaja sin ids y llega completo al tema de otra per
   const db = new MemoraDB(`comparte-${Math.random()}`)
   const id = await importShared(parseShared(file), 5, db, 100)
   const got = await db.vocabLists.get(id)
-  expect(got).toMatchObject({ topicId: 5, name: 'Imagine', from: 'Ganio', text: 'Imagine all the people' })
+  expect(got).toMatchObject({ topicId: 5, name: 'Imagine', from: 'Ganio', text: 'Imagine all the people', source: 'John Lennon, «Imagine» (1971)' })
   const ws = await db.words.where('listId').equals(id).toArray()
   expect(ws.map((w) => [w.term, w.meaning, w.topicId])).toEqual([
     ['people', 'gente', 5],

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { db, type Word } from '../lib/db'
 import { LANGUAGES } from '../lib/speech'
 import { nowMs } from '../lib/questions'
+import CopyButton from './CopyButton'
 
 export type WordDraft = Partial<Omit<Word, 'id' | 'topicId' | 'listId' | 'createdAt'>> & { id?: number }
 
@@ -19,6 +20,9 @@ export default function WordEditor({ topicId, listId, draft, onClose }: { topicI
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     if (ref.current && !ref.current.open) ref.current.showModal()
+    // Si la palabra ya viene escrita (desde el texto sombreado), el cursor va al significado.
+    ref.current?.querySelector<HTMLInputElement>(draft.term && !draft.id ? '#w-meaning' : '#w-term')?.focus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const [w, setW] = useState<WordDraft>({ lang: 'en-US', ...draft })
   const [error, setError] = useState<string | null>(null)
@@ -46,7 +50,10 @@ export default function WordEditor({ topicId, listId, draft, onClose }: { topicI
         <div className="setup-grid">
           <label className="field" htmlFor="w-term">
             <span>Palabra o frase</span>
-            <input id="w-term" className="input" value={w.term ?? ''} onChange={(e) => setW({ ...w, term: e.target.value })} />
+            <span className="input-with-btn">
+              <input id="w-term" className="input" value={w.term ?? ''} onChange={(e) => setW({ ...w, term: e.target.value })} />
+              <CopyButton text={w.term ?? ''} label="Copiar para buscar el significado" />
+            </span>
           </label>
           <label className="field" htmlFor="w-lang">
             <span>Idioma</span>

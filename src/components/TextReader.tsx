@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { canSpeak, speak, stopSpeaking } from '../lib/speech'
 import { getSettings, useSettings } from '../lib/settings'
 import { splitSentences } from '../lib/vocab'
@@ -10,7 +10,7 @@ type WakeLock = { release: () => Promise<void> }
 // Lee tu texto en voz alta, frase por frase. Puedes pausar, retroceder,
 // avanzar o tocar cualquier frase para seguir desde ahí. La frase que
 // se está leyendo se resalta, y Memora recuerda dónde te quedaste.
-export default function TextReader({ text, lang, startAt = 0, onPosition }: { text: string; lang: string; startAt?: number; onPosition?: (i: number) => void }) {
+export default function TextReader({ text, lang, startAt = 0, onPosition, below }: { text: string; lang: string; startAt?: number; onPosition?: (i: number) => void; below?: ReactNode }) {
   const s = useSettings()
   const sentences = useMemo(() => splitSentences(text), [text])
   const [idx, setIdx] = useState(() => Math.min(startAt, Math.max(0, sentences.length - 1)))
@@ -80,6 +80,7 @@ export default function TextReader({ text, lang, startAt = 0, onPosition }: { te
           </button>
         ))}
       </div>
+      {below}
       <div className="reader-controls" role="group" aria-label="Controles de lectura">
         <button type="button" className="btn btn-ghost" aria-label="Frase anterior" onClick={() => go(idx - 1)} disabled={idx === 0}>
           ⏮
