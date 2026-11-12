@@ -1,11 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import DurationPicker from '../components/DurationPicker'
 import { Podium, StudyTogether, Turn } from '../components/compete/parts'
 import { db } from '../lib/db'
 import type { PlayerResult, PlayerRules } from '../lib/competition'
+import { formatDuration } from '../lib/duration'
 import { shuffle, type Question } from '../lib/questions'
-import { TIMER_OPTIONS, timerLabel } from '../lib/settings'
+import { wordsToQuestions } from '../lib/vocab'
 
 type Phase =
   | { name: 'setup' }
@@ -14,7 +16,6 @@ type Phase =
   | { name: 'play'; turn: number }
   | { name: 'results' }
 
-const STUDY = [0, 1, 2, 3, 5, 10, 15]
 const COUNTS = [5, 10, 15, 20, 30, 50, 100]
 
 // Competencia en el mismo celular: varios jugadores, las mismas preguntas,
@@ -22,8 +23,12 @@ const COUNTS = [5, 10, 15, 20, 30, 50, 100]
 // y modo moderador (tiempo y pistas por jugador, visibles para todos).
 export default function CompetePage() {
   const topicId = Number(useParams().topicId)
+  // ?vocab=ID: competir con un vocabulario («¿Qué significa…?») en vez de las preguntas del tema.
+  const vocabId = Number(useSearchParams()[0].get('vocab')) || null
   const topic = useLiveQuery(() => db.topics.get(topicId), [topicId])
-  const all = useLiveQuery(() => db.questions.where('topicId').equals(topicId).sortBy('createdAt'), [topicId])
+  const vocab = useLiveQuery(async () => (vocabId ? { list: await db.vocabLists.get(vocabId), words: await db.words.where('listId').equals(vocabId).sortBy('createdAt') } : null), [vocabId])
+  const topicQuestions = useLiveQuery(() => db.questions.where('topicId').equals(topicId).sortBy('createdAt'), [topicId])
+  const all = useMemo(() => (vocabId ? (vocab ? wordsToQuestions(vocab.words, topicId) : undefined) : topicQuestions), [vocabId, vocab, topicQuestions, topicId])
   const [phase, setPhase] = useState<Phase>({ name: 'setup' })
   const [players, setPlayers] = useState<PlayerRules[]>([
     { name: '', seconds: 20, hints: false },
@@ -31,7 +36,7 @@ export default function CompetePage() {
   ])
   const [moderated, setModerated] = useState(false)
   const [count, setCount] = useState(10)
-  const [studyMin, setStudyMin] = useState(2)
+  const [studySec, setStudySec] = useState(120)
   const [questions, setQuestions] = useState<Question[]>([])
   const [results, setResults] = useState<PlayerResult[]>([])
 
@@ -42,7 +47,7 @@ export default function CompetePage() {
     const qs = shuffle(all).slice(0, count)
     setQuestions(qs)
     setResults(named.map((p) => ({ ...p, answers: [] })))
-    setPhase(studyMin ? { name: 'study', endAt: Date.now() + studyMin * 60_000 } : { name: 'handoff', turn: 0 })
+    setPhase(studySec ? { name: 'study', endAt: Date.now() + studySec * 1000 } : { name: 'handoff', turn: 0 })
   }
   const setAll = (patch: Partial<PlayerRules>) => setPlayers(players.map((p) => ({ ...p, ...patch })))
 
@@ -54,12 +59,18 @@ export default function CompetePage() {
 
       {phase.name === 'setup' && (
         <div className="setup">
-          <h1 className="page-title">🏆 Competir</h1>
-          <p className="lead">Juega con amigos en este celular: todos responden las mismas preguntas, cada uno en su turno. Gana quien suma más puntos; si empatan, quien fue más rápido.</p>
+          <h1 className="page-title">🏆 Competir{vocab?.list ? ` con «${vocab.list.name}»` : ''}</h1>
+          <p className="lead">Juega con tu familia o amigos en este celular: todos responden las mismas preguntas, cada uno en su turno. Gana quien suma más puntos; si empatan, quien fue más rápido.</p>
           {all.length < 3 ? (
-            <p className="empty">
-              Necesitas al menos 3 preguntas en este tema. <Link to={`/tema/${topicId}/pegar`}>Añadir preguntas</Link>
-            </p>
+            vocabId ? (
+              <p className="empty">
+                Para competir con un vocabulario, al menos 3 palabras necesitan su significado. <Link to={`/tema/${topicId}/vocabulario/${vocabId}?ver=palabras`}>Completar significados</Link>
+              </p>
+            ) : (
+              <p className="empty">
+                Necesitas al menos 3 preguntas en este tema. <Link to={`/tema/${topicId}/pegar`}>Añadir preguntas</Link>
+              </p>
+            )
           ) : (
             <>
               <fieldset className="card setup-block">
@@ -69,14 +80,7 @@ export default function CompetePage() {
                     <input className="input" value={p.name} placeholder={`Jugador ${i + 1}`} aria-label={`Nombre del jugador ${i + 1}`} onChange={(e) => setPlayers(players.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
                     {moderated && (
                       <>
-                        <select className="input input-small" aria-label={`Tiempo de ${named[i].name}`} value={p.seconds} onChange={(e) => setPlayers(players.map((x, j) => (j === i ? { ...x, seconds: Number(e.target.value) } : x)))}>
-                          <option value={0}>Sin tiempo</option>
-                          {TIMER_OPTIONS.map((t) => (
-                            <option key={t} value={t}>
-                              {timerLabel(t)}
-                            </option>
-                          ))}
-                        </select>
+                        <DurationPicker id={`time-${i}`} label={`Tiempo de ${named[i].name}`} value={p.seconds} onChange={(t) => setPlayers(players.map((x, j) => (j === i ? { ...x, seconds: t } : x)))} quick={[5, 10, 20, 30, 60]} />
                         <label className="check">
                           <input type="checkbox" checked={p.hints} onChange={(e) => setPlayers(players.map((x, j) => (j === i ? { ...x, hints: e.target.checked } : x)))} />
                           Pistas
@@ -104,10 +108,10 @@ export default function CompetePage() {
                     Iguales para todos
                   </button>
                   <button role="radio" aria-checked={moderated} className={`seg-btn ${moderated ? 'seg-on' : ''}`} onClick={() => setModerated(true)}>
-                    Con moderador
+                    Distintas para cada jugador
                   </button>
                 </div>
-                <p className="muted">{moderated ? 'El moderador puede dar más tiempo o pistas a alguien (por ejemplo, a quien recién empieza). Todos verán esas ventajas en los resultados.' : 'Todos juegan con el mismo tiempo y las mismas ayudas.'}</p>
+                <p className="muted">{moderated ? 'Acuerden antes el tiempo y las pistas de cada jugador (por ejemplo, más tiempo para quien recién empieza). Todos verán esas ventajas en los resultados.' : 'Todos juegan con el mismo tiempo y las mismas ayudas.'}</p>
                 <div className="setup-grid">
                   <label className="field" htmlFor="c-count">
                     <span>Preguntas</span>
@@ -120,29 +124,8 @@ export default function CompetePage() {
                       <option value={all.length}>Todas ({all.length})</option>
                     </select>
                   </label>
-                  <label className="field" htmlFor="c-study">
-                    <span>Estudiar antes</span>
-                    <select id="c-study" className="input" value={studyMin} onChange={(e) => setStudyMin(Number(e.target.value))}>
-                      {STUDY.map((m) => (
-                        <option key={m} value={m}>
-                          {m ? `${m} min para todos` : 'Sin estudiar'}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
                   {!moderated && (
                     <>
-                      <label className="field" htmlFor="c-time">
-                        <span>Tiempo por pregunta</span>
-                        <select id="c-time" className="input" value={players[0].seconds} onChange={(e) => setAll({ seconds: Number(e.target.value) })}>
-                          <option value={0}>Sin tiempo</option>
-                          {TIMER_OPTIONS.map((t) => (
-                            <option key={t} value={t}>
-                              {timerLabel(t)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
                       <label className="check">
                         <input type="checkbox" checked={players[0].hints} onChange={(e) => setAll({ hints: e.target.checked })} />
                         Permitir pistas
@@ -150,6 +133,8 @@ export default function CompetePage() {
                     </>
                   )}
                 </div>
+                {!moderated && <DurationPicker id="c-time" label="Tiempo por pregunta" value={players[0].seconds} onChange={(t) => setAll({ seconds: t })} quick={[5, 10, 20, 30, 60]} />}
+                <DurationPicker id="c-study" label="Estudiar antes (mismo tiempo para todos)" value={studySec} onChange={setStudySec} quick={[30, 60, 120, 300, 600, 1800]} />
               </fieldset>
               <button className="btn btn-block" onClick={start}>
                 Empezar competencia
@@ -159,7 +144,7 @@ export default function CompetePage() {
         </div>
       )}
 
-      {phase.name === 'study' && <StudyTogether title={topic.name} questions={questions} endAt={phase.endAt} onDone={() => setPhase({ name: 'handoff', turn: 0 })} />}
+      {phase.name === 'study' && <StudyTogether title={vocab?.list?.name ?? topic.name} questions={vocabId ? [] : questions} words={vocab?.words} endAt={phase.endAt} onDone={() => setPhase({ name: 'handoff', turn: 0 })} />}
 
       {phase.name === 'handoff' && (
         <div className="card handoff">
@@ -169,7 +154,7 @@ export default function CompetePage() {
           <h1>Pásale el celular a</h1>
           <p className="handoff-name">{results[phase.turn].name}</p>
           <p className="muted">
-            {questions.length} preguntas · {results[phase.turn].seconds ? `${results[phase.turn].seconds} s por pregunta` : 'sin tiempo'} · {results[phase.turn].hints ? 'con pistas' : 'sin pistas'}
+            {questions.length} preguntas · {results[phase.turn].seconds ? `${formatDuration(results[phase.turn].seconds)} por pregunta` : 'sin tiempo'} · {results[phase.turn].hints ? 'con pistas' : 'sin pistas'}
           </p>
           <p className="muted">Los demás, no miren 👀. Las respuestas correctas se verán al final.</p>
           <button className="btn btn-block" onClick={() => setPhase({ name: 'play', turn: phase.turn })}>

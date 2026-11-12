@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { DAILY_GOALS, TEXT_SCALES, THEMES, VOICE_RATES, updateSettings, useSettings } from '../lib/settings'
+import VoiceControls from '../components/VoiceControls'
+import { DAILY_GOALS, TEXT_SCALES, THEMES, updateSettings, useSettings } from '../lib/settings'
 import { LANGUAGES, canListen, canSpeak } from '../lib/speech'
 import { say } from '../lib/voice'
 
@@ -7,6 +9,7 @@ import { say } from '../lib/voice'
 // Todo se guarda en este dispositivo y se aplica al instante.
 export default function SettingsPage() {
   const s = useSettings()
+  const [configLang, setConfigLang] = useState(s.voiceLang === 'auto' ? 'es-ES' : s.voiceLang)
   return (
     <section>
       <nav className="crumbs">
@@ -77,23 +80,24 @@ export default function SettingsPage() {
               ))}
             </select>
           </label>
-          <div className="field">
-            <span>Velocidad</span>
-            <div className="seg" role="radiogroup" aria-label="Velocidad de la voz">
-              {VOICE_RATES.map((r) => (
-                <button key={r.value} type="button" role="radio" aria-checked={s.voiceRate === r.value} className={`seg-btn ${s.voiceRate === r.value ? 'seg-on' : ''}`} onClick={() => updateSettings({ voiceRate: r.value })}>
-                  {r.label}
-                </button>
+          <label className="field" htmlFor="voice-config">
+            <span>Configurar la voz para</span>
+            <select id="voice-config" className="input" value={configLang} onChange={(e) => setConfigLang(e.target.value)}>
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.label}
+                </option>
               ))}
-            </div>
-          </div>
+            </select>
+          </label>
         </div>
+        <VoiceControls lang={configLang} idPrefix="settings" />
         <div className="chips">
           <label className="check">
             <input type="checkbox" checked={s.autoRead} onChange={(e) => updateSettings({ autoRead: e.target.checked })} />
             Leer cada pregunta al aparecer
           </label>
-          <button type="button" className="btn btn-small btn-ghost" onClick={() => void say(s.voiceLang.startsWith('en') ? 'Hello! This is how I sound.' : 'Hola, así sueno al leer tus preguntas.')}>
+          <button type="button" className="btn btn-small btn-ghost" onClick={() => void say(configLang.startsWith('en') ? 'Hello! This is how I sound.' : 'Hola, así sueno al leer tus preguntas.', configLang)}>
             🔊 Probar la voz
           </button>
         </div>

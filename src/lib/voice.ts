@@ -8,10 +8,17 @@ export function langFor(text: string) {
   return s.voiceLang === 'auto' ? detectLang(text) : s.voiceLang
 }
 
-/** Lee un texto con el idioma y velocidad de Ajustes. */
-export function say(text: string, lang = langFor(text)) {
+/** Voz y estilo elegidos en Ajustes para ese idioma. */
+export function voiceOptions(lang: string) {
+  const s = getSettings()
+  return { voiceURI: s.voices[lang.split('-')[0].toLowerCase()], style: s.voiceStyle }
+}
+
+/** Lee un texto con el idioma, la voz y la velocidad de Ajustes. slow = más lento (para entender mejor). */
+export function say(text: string, lang = langFor(text), slow = false) {
   stopSpeaking()
-  return speak(text, lang, getSettings().voiceRate)
+  const rate = getSettings().voiceRate
+  return speak(text, lang, slow ? Math.max(0.35, rate * 0.6) : rate, voiceOptions(lang))
 }
 
 /** Lo que se lee en voz alta de una pregunta (la pregunta y sus alternativas). */

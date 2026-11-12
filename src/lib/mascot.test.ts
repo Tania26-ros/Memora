@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { answerLine, homeLine, pick, resultsLine, type HomeState } from './mascot'
 
-const base: HomeState = { hour: 10, notebooks: 2, questions: 20, todayXp: 0, dailyGoal: 60, streak: 0, due: 0 }
+const base: HomeState = { hour: 10, notebooks: 2, questions: 20, todayAnswered: 0, dailyGoal: 10, streak: 0, due: 0 }
 
 describe('Memo en el inicio', () => {
   it('guía a quien recién empieza', () => {
@@ -15,8 +15,8 @@ describe('Memo en el inicio', () => {
   })
   it('cuida la racha y celebra la meta', () => {
     expect(homeLine({ ...base, streak: 4 }).text).toMatch(/4 días seguidos/)
-    expect(homeLine({ ...base, todayXp: 80, streak: 4 }).mood).toBe('celebra')
-    expect(homeLine({ ...base, todayXp: 20 }).text).toMatch(/40 puntos/)
+    expect(homeLine({ ...base, todayAnswered: 12, streak: 4 }).mood).toBe('celebra')
+    expect(homeLine({ ...base, todayAnswered: 4 }).text).toMatch(/faltan 6 preguntas/)
   })
   it('de madrugada aconseja dormir', () => {
     expect(homeLine({ ...base, hour: 2 }).mood).toBe('duerme')

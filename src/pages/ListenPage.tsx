@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { db } from '../lib/db'
 import { correctAnswerText } from '../lib/questions'
-import { VOICE_RATES, updateSettings, useSettings } from '../lib/settings'
+import VoiceControls from '../components/VoiceControls'
 import { canSpeak, stopSpeaking } from '../lib/speech'
-import { questionSpeech, say } from '../lib/voice'
+import { langFor, questionSpeech, say } from '../lib/voice'
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 type Stage = 'pregunta' | 'pensar' | 'respuesta'
@@ -14,7 +14,6 @@ type Stage = 'pregunta' | 'pensar' | 'respuesta'
 // y luego lee la respuesta. Ideal para repasar en el carro o caminando.
 export default function ListenPage() {
   const topicId = Number(useParams().topicId)
-  const s = useSettings()
   const topic = useLiveQuery(() => db.topics.get(topicId), [topicId])
   const questions = useLiveQuery(() => db.questions.where('topicId').equals(topicId).sortBy('createdAt'), [topicId])
   const [idx, setIdx] = useState(0)
@@ -108,17 +107,8 @@ export default function ListenPage() {
                   ))}
                 </select>
               </label>
-              <div className="field">
-                <span>Velocidad</span>
-                <div className="seg" role="radiogroup" aria-label="Velocidad">
-                  {VOICE_RATES.map((r) => (
-                    <button key={r.value} type="button" role="radio" aria-checked={s.voiceRate === r.value} className={`seg-btn ${s.voiceRate === r.value ? 'seg-on' : ''}`} onClick={() => updateSettings({ voiceRate: r.value })}>
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
+            <VoiceControls lang={langFor(questions[0]?.prompt ?? '')} idPrefix="listen" />
             <label className="check">
               <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} />
               Repetir todo al terminar

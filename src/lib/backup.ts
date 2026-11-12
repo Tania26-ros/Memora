@@ -1,4 +1,4 @@
-import { db, type MemoraDB, type Notebook, type StudyFile, type Topic, type Word } from './db'
+import { db, type MemoraDB, type Notebook, type StudyFile, type Topic, type VocabList, type Word, ensureVocabLists } from './db'
 import type { DayActivity } from './progress'
 import type { Question } from './questions'
 import type { ReviewState } from './srs'
@@ -22,6 +22,8 @@ export interface Backup {
   questions: Question[]
   reviews: ReviewState[]
   words: Word[]
+  /** Desde la versión con varios vocabularios por tema (las copias antiguas no lo traen). */
+  vocabLists?: VocabList[]
   days: DayActivity[]
 }
 
@@ -52,6 +54,7 @@ export async function exportAll(options: { includeFiles?: boolean } = {}, databa
     questions: await database.questions.toArray(),
     reviews: await database.reviews.toArray(),
     words: await database.words.toArray(),
+    vocabLists: await database.vocabLists.toArray(),
     days: await database.days.toArray(),
   }
 }
@@ -69,7 +72,7 @@ export function checkBackup(data: unknown): string | null {
 export async function restoreAll(b: Backup, database: MemoraDB = db) {
   const problem = checkBackup(b)
   if (problem) throw new Error(problem)
-  const tables = [database.notebooks, database.topics, database.files, database.questions, database.reviews, database.words, database.days]
+  const tables = [database.notebooks, database.topics, database.files, database.questions, database.reviews, database.words, database.vocabLists, database.days]
   await database.transaction('rw', tables, async () => {
     await Promise.all(tables.map((t) => t.clear()))
     await database.notebooks.bulkPut(b.notebooks)
@@ -78,6 +81,8 @@ export async function restoreAll(b: Backup, database: MemoraDB = db) {
     await database.questions.bulkPut(b.questions ?? [])
     await database.reviews.bulkPut(b.reviews ?? [])
     await database.words.bulkPut(b.words ?? [])
+    await database.vocabLists.bulkPut(b.vocabLists ?? [])
+    await ensureVocabLists(database)
     await database.days.bulkPut(b.days ?? [])
   })
 }

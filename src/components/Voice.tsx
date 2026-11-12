@@ -2,13 +2,18 @@ import { useState } from 'react'
 import { canListen, canSpeak, listen, stopSpeaking } from '../lib/speech'
 import { say } from '../lib/voice'
 
-// Botón 🔊 para escuchar un texto.
+// Botones 🔊 para escuchar un texto y 🐢 para escucharlo más lento.
 export function SpeakButton({ text, lang, label = 'Escuchar' }: { text: string; lang?: string; label?: string }) {
   if (!canSpeak()) return null
   return (
-    <button type="button" className="btn btn-small btn-ghost voice-btn" aria-label={label} title={label} onClick={() => void say(text, lang)}>
-      🔊
-    </button>
+    <span className="voice-pair">
+      <button type="button" className="btn btn-small btn-ghost voice-btn" aria-label={label} title={label} onClick={() => void say(text, lang)}>
+        🔊
+      </button>
+      <button type="button" className="btn btn-small btn-ghost voice-btn" aria-label={`${label} más lento`} title="Más lento" onClick={() => void say(text, lang, true)}>
+        🐢
+      </button>
+    </span>
   )
 }
 

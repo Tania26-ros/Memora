@@ -2,11 +2,12 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import BookContent, { type BookMode } from '../components/BookContent'
+import DurationPicker from '../components/DurationPicker'
 import { db } from '../lib/db'
+import { clock } from '../lib/duration'
 import { downloadFile, fileName, wordDocument } from '../lib/document'
 import { PAPERS, updateSettings, useSettings } from '../lib/settings'
 
-const STUDY_TIMES = [0, 5, 10, 15, 20, 30, 45, 60]
 
 // Lector tipo libro: todo el tema para leer cómodo (letra grande, color de papel),
 // con tiempo de estudio opcional, y para descargar en Word o PDF.
@@ -126,7 +127,8 @@ export default function ReaderPage() {
 
 // Tiempo de estudio: cuenta regresiva y aviso al terminar.
 function StudyTimer({ topicId }: { topicId: number }) {
-  const [minutes, setMinutes] = useState(0)
+  const [open, setOpen] = useState(false)
+  const [seconds, setSeconds] = useState(20 * 60)
   const [endAt, setEndAt] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
 
@@ -142,32 +144,34 @@ function StudyTimer({ topicId }: { topicId: number }) {
   return (
     <div className="study-timer">
       {!endAt ? (
-        <label className="check" htmlFor="study-time">
-          ⏱
-          <select
-            id="study-time"
-            className="input input-small"
-            value={minutes}
-            onChange={(e) => {
-              const m = Number(e.target.value)
-              setMinutes(m)
-              if (m) {
-                setNow(Date.now())
-                setEndAt(Date.now() + m * 60_000)
-              }
-            }}
-          >
-            {STUDY_TIMES.map((m) => (
-              <option key={m} value={m}>
-                {m ? `${m} min de estudio` : 'Sin tiempo'}
-              </option>
-            ))}
-          </select>
-        </label>
+        open ? (
+          <div className="card study-timer-setup">
+            <DurationPicker id="study-time" label="Tiempo de estudio" value={seconds} onChange={setSeconds} allowNone={false} quick={[300, 600, 1200, 1800, 3600, 7200]} />
+            <div className="card-actions">
+              <button
+                className="btn btn-small"
+                onClick={() => {
+                  setNow(Date.now())
+                  setEndAt(Date.now() + seconds * 1000)
+                  setOpen(false)
+                }}
+              >
+                Empezar
+              </button>
+              <button className="btn btn-small btn-ghost" onClick={() => setOpen(false)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button className="btn btn-small btn-ghost" onClick={() => setOpen(true)}>
+            ⏱ Tiempo de estudio
+          </button>
+        )
       ) : (
         <span className={`timer-pill ${left <= 30 ? 'timer-warn' : ''}`} role="timer" aria-live={left <= 30 ? 'polite' : 'off'}>
-          ⏱ {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
-          <button className="btn btn-small btn-ghost" onClick={() => (setEndAt(null), setMinutes(0))}>
+          ⏱ {clock(left)}
+          <button className="btn btn-small btn-ghost" onClick={() => setEndAt(null)}>
             Quitar
           </button>
         </span>
@@ -179,7 +183,7 @@ function StudyTimer({ topicId }: { topicId: number }) {
           <Link className="btn btn-block" to={`/tema/${topicId}/jugar`}>
             Ir a jugar
           </Link>
-          <button className="btn btn-block btn-ghost" onClick={() => (setEndAt(null), setMinutes(0))}>
+          <button className="btn btn-block btn-ghost" onClick={() => setEndAt(null)}>
             Seguir leyendo
           </button>
         </div>

@@ -17,6 +17,6 @@ it('Memo encuentra el tema con más repasos pendientes y la racha', async () => 
     { date: '2026-11-11', xp: 25, answered: 2, correct: 2 },
   ])
   const s = await homeState(60, db, now)
-  expect(s).toMatchObject({ hour: 9, notebooks: 1, due: 3, dueTopic: { id: b, name: 'Tejidos' }, todayXp: 25, streak: 2 })
+  expect(s).toMatchObject({ hour: 9, notebooks: 1, due: 3, dueTopic: { id: b, name: 'Tejidos' }, todayAnswered: 2, streak: 2 })
   await db.delete()
 })

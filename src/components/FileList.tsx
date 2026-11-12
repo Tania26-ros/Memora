@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { FILE_KINDS, db, type FileKind, type StudyFile } from '../lib/db'
 import { fileIcon, formatBytes } from '../lib/format'
 import ConfirmButton from './ConfirmButton'
+import SourceCredit from './SourceCredit'
 
 // Lista de archivos de un tema. Las imágenes muestran miniatura.
 // "Abrir" usa una URL temporal (blob:) que apunta al archivo guardado.
@@ -35,6 +36,7 @@ function FileRow({ file }: { file: StudyFile }) {
           </select>
           <span className="muted">{formatBytes(file.size)}</span>
         </div>
+        <SourceCredit compact source={file.source} onSave={(v) => void db.files.update(file.id, { source: v })} />
       </div>
       <div className="file-actions">
         <a className="btn btn-small btn-ghost" href={url} download={file.name}>

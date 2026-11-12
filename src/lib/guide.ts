@@ -19,7 +19,7 @@ export async function homeState(dailyGoal: number, database: MemoraDB = db, now 
     hour: now.getHours(),
     notebooks,
     questions,
-    todayXp: days.find((d) => d.date === today)?.xp ?? 0,
+    todayAnswered: days.find((d) => d.date === today)?.answered ?? 0,
     dailyGoal,
     streak: streakInfo(days, today).current,
     due: due.length,

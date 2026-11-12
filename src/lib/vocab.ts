@@ -1,3 +1,6 @@
+import type { Word } from './db'
+import { normalize, shuffle, type McqQuestion } from './questions'
+
 // ─────────────────────────────────────────────────────────────
 // Vocabulario: herramientas para sombrear palabras en un texto.
 // ─────────────────────────────────────────────────────────────
@@ -63,4 +66,60 @@ export function parseWordList(text: string): { term: string; meaning?: string }[
       const m = /^(.+?)\s+[-–—:=]\s+(.+)$/.exec(l) ?? /^(.+?)\s*[:=]\s*(.+)$/.exec(l)
       return m ? { term: m[1].trim(), meaning: m[2].trim() } : { term: l }
     })
+}
+
+/**
+ * Divide un texto en frases para leerlo en voz alta de a poco
+ * (así se puede pausar, retroceder y empezar desde cualquier frase).
+ * Las frases muy largas se cortan en comas, para que la voz no se trabe.
+ */
+export function splitSentences(text: string, maxLen = 220): string[] {
+  const out: string[] = []
+  for (const para of text.split(/\n+/)) {
+    const parts = para.match(/[^.!?…。！？]+(?:[.!?…。！？]+["'»”)\]]*|$)/gu) ?? []
+    for (const raw of parts) {
+      const s = raw.trim()
+      if (!s) continue
+      if (s.length <= maxLen) {
+        out.push(s)
+        continue
+      }
+      let chunk = ''
+      for (const piece of s.split(/(?<=[,;:])\s+/)) {
+        if (chunk && (chunk + ' ' + piece).length > maxLen) {
+          out.push(chunk)
+          chunk = piece
+        } else chunk = chunk ? `${chunk} ${piece}` : piece
+      }
+      if (chunk) out.push(chunk)
+    }
+  }
+  return out
+}
+
+/**
+ * Convierte palabras con significado en preguntas de opción múltiple
+ * («¿Qué significa «people»?»), para competir con un vocabulario.
+ * Las alternativas incorrectas son significados de otras palabras.
+ */
+export function wordsToQuestions(words: Word[], topicId: number, rand: () => number = Math.random): McqQuestion[] {
+  const usable = words.filter((w) => w.meaning?.trim())
+  const meanings = [...new Set(usable.map((w) => w.meaning!.trim()))]
+  return usable.map((w, i) => {
+    const right = w.meaning!.trim()
+    const wrong = shuffle(meanings.filter((m) => normalize(m) !== normalize(right)), rand).slice(0, 3)
+    const options = shuffle([right, ...wrong], rand)
+    return {
+      id: -(i + 1),
+      topicId,
+      type: 'mcq',
+      prompt: `¿Qué significa «${w.term}»?`,
+      options,
+      correct: options.indexOf(right),
+      difficulty: 'regular',
+      explanation: w.example,
+      hint: w.hint,
+      createdAt: 0,
+    }
+  })
 }

@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import type { VoiceStyle } from './speech'
 
 // Preferencias del estudiante. Se guardan en este dispositivo (localStorage)
 // y se usan como valores por defecto en cada juego.
@@ -17,11 +18,14 @@ export interface Settings {
   theme: ThemeId
   /** Tamaño de la letra: 1 = normal. */
   textScale: number
-  /** Puntos que quieres ganar cada día. */
+  /** Preguntas que quieres responder cada día. */
   dailyGoal: number
   /** Idioma de la voz: 'auto' = adivinarlo por el texto. */
   voiceLang: string
   voiceRate: number
+  /** Voz elegida para cada idioma (por ejemplo { es: '…', en: '…' }). */
+  voices: Record<string, string>
+  voiceStyle: VoiceStyle
   /** Leer cada pregunta en voz alta al aparecer. */
   autoRead: boolean
   /** Lector tipo libro: tamaño de letra, color del papel e interlineado. */
@@ -30,6 +34,8 @@ export interface Settings {
   readerSpacing: number
   /** Mostrar a Memo, la mascota que guía y anima. */
   mascot: boolean
+  /** Tu nombre al compartir vocabularios y competir. */
+  myName: string
 }
 
 export type PaperId = 'blanco' | 'crema' | 'sepia' | 'noche'
@@ -60,11 +66,14 @@ export const TEXT_SCALES = [
 ]
 
 export const DAILY_GOALS = [
-  { value: 30, label: 'Suave', hint: '30 puntos · unas 3 preguntas' },
-  { value: 60, label: 'Normal', hint: '60 puntos · unas 5 preguntas' },
-  { value: 120, label: 'Intensa', hint: '120 puntos · unas 10 preguntas' },
-  { value: 250, label: 'Maratón', hint: '250 puntos · unas 20 preguntas' },
+  { value: 5, label: 'Suave', hint: 'Responder 5 preguntas al día' },
+  { value: 10, label: 'Normal', hint: 'Responder 10 preguntas al día' },
+  { value: 20, label: 'Intensa', hint: 'Responder 20 preguntas al día' },
+  { value: 30, label: 'Maratón', hint: 'Responder 30 preguntas al día' },
 ]
+
+/** Antes la meta se medía en puntos (30, 60, 120, 250): se pasa a preguntas. */
+const OLD_GOALS: Record<number, number> = { 60: 10, 120: 20, 250: 30 }
 
 export const DEFAULT_SETTINGS: Settings = {
   sound: true,
@@ -78,20 +87,26 @@ export const DEFAULT_SETTINGS: Settings = {
   hints: true,
   theme: 'clasico',
   textScale: 1,
-  dailyGoal: 60,
+  dailyGoal: 10,
   voiceLang: 'auto',
   voiceRate: 1,
+  voices: {},
+  voiceStyle: 'normal',
   autoRead: false,
   readerScale: 1.2,
   paper: 'crema',
   readerSpacing: 1.7,
   mascot: true,
+  myName: '',
 }
 
 export const VOICE_RATES = [
-  { value: 0.75, label: 'Lenta' },
+  { value: 0.5, label: '0,5×' },
+  { value: 0.75, label: '0,75×' },
   { value: 1, label: 'Normal' },
-  { value: 1.25, label: 'Rápida' },
+  { value: 1.25, label: '1,25×' },
+  { value: 1.5, label: '1,5×' },
+  { value: 2, label: '2×' },
 ]
 
 /** Opciones de tiempo por pregunta: de 5 segundos a 5 minutos. */
@@ -107,7 +122,9 @@ const listeners = new Set<() => void>()
 
 function load(): Settings {
   try {
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }
+    const saved: Settings = { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }
+    if (!DAILY_GOALS.some((g) => g.value === saved.dailyGoal)) saved.dailyGoal = OLD_GOALS[saved.dailyGoal] ?? (saved.dailyGoal === 30 ? 5 : 10)
+    return saved
   } catch {
     return DEFAULT_SETTINGS
   }

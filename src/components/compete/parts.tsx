@@ -4,13 +4,15 @@ import Player from '../game/Players'
 import TimerBar from '../game/TimerBar'
 import { confetti, playCorrect, playWrong, vibrate } from '../../lib/effects'
 import { MEDALS, advantages, ranking, type AnswerRecord, type PlayerResult, type PlayerRules } from '../../lib/competition'
+import type { Word } from '../../lib/db'
+import { clock } from '../../lib/duration'
 import { correctAnswerText, type Question } from '../../lib/questions'
 import { PAPERS, useSettings } from '../../lib/settings'
 import { langFor } from '../../lib/voice'
 
 // Piezas de las competencias, usadas en el mismo celular y en línea.
 
-export function StudyTogether({ title, questions, endAt, onDone }: { title: string; questions: Question[]; endAt: number; onDone: () => void }) {
+export function StudyTogether({ title, questions, words = [], endAt, onDone }: { title: string; questions: Question[]; words?: Word[]; endAt: number; onDone: () => void }) {
   const s = useSettings()
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -26,14 +28,14 @@ export function StudyTogether({ title, questions, endAt, onDone }: { title: stri
     <div>
       <div className={`card study-bar ${left <= 10 ? 'timer-warn' : ''}`} role="timer">
         <strong>
-          📖 Estudien juntos · ⏱ {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
+          📖 Estudien juntos · ⏱ {clock(left)}
         </strong>
         <button className="btn btn-small" onClick={onDone}>
           Todos listos
         </button>
       </div>
       <article className="book" style={{ background: paper.bg, color: paper.fg, fontSize: `${s.readerScale}rem`, lineHeight: s.readerSpacing }}>
-        <BookContent title={title} subtitle="Mismo tiempo para todos" questions={questions} words={[]} texts={[]} mode="respuestas" />
+        <BookContent title={title} subtitle="Mismo tiempo para todos" questions={questions} words={words} texts={[]} mode="respuestas" />
       </article>
     </div>
   )
