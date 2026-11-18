@@ -91,7 +91,7 @@ export default function VocabListsPage() {
         <p className="muted">Si alguien te mandó un vocabulario de Memora por WhatsApp o correo, descarga el archivo y elígelo aquí.</p>
         <label className="btn btn-ghost file-btn">
           📥 Elegir archivo
-          <input type="file" accept=".json,application/json" hidden onChange={(e) => void importFile(e.target.files?.[0])} />
+          <input type="file" hidden onChange={(e) => (void importFile(e.target.files?.[0]), (e.target.value = ''))} />
         </label>
         {error && (
           <p className="import-problem" role="alert">

@@ -191,6 +191,9 @@ a { color: var(--primary); }
 .undo-toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .undo-btn { background: var(--primary); color: var(--primary-text); }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+.sync-conflict { margin-bottom: 1rem; border-color: var(--primary); }
+.sync-conflict p { margin: 0 0 0.5rem; }
+.sync-notice { margin-bottom: 1rem; }
 .ios-install { position: relative; }
 .ios-hint { position: absolute; right: 0; top: 44px; width: 220px; margin: 0; padding: 0.6rem 0.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); font-size: 0.85rem; }
 

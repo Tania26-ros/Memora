@@ -15,7 +15,7 @@ export default function AccountPage() {
         <Link to="/ajustes">← Ajustes</Link>
       </nav>
       <h1 className="page-title">Cuenta y copias</h1>
-      <p className="lead">Todo lo que haces en Memora se guarda en este dispositivo. Haz copias para no perderlo si cambias o pierdes el celular.</p>
+      <p className="lead">Todo lo que haces en Memora se guarda en este dispositivo. Entra con tu correo para tenerlo también en tus otros dispositivos, o haz copias para no perderlo.</p>
       <CloudCard />
       <FileBackupCard />
     </section>
@@ -67,7 +67,9 @@ function FileBackupCard() {
         </button>
         <label className="btn btn-small btn-ghost">
           ⬆ Restaurar copia
-          <input type="file" accept="application/json,.json" hidden onChange={(e) => void pick(e.target.files?.[0])} />
+          {/* Sin filtro de tipo: en Android, la copia recibida por WhatsApp, Drive o correo
+              a veces llega como «archivo genérico» y el filtro la escondía. Se revisa al abrirla. */}
+          <input type="file" hidden onChange={(e) => (void pick(e.target.files?.[0]), (e.target.value = ''))} />
         </label>
       </div>
       {pending && <ConfirmRestore backup={pending} onCancel={() => setPending(null)} onConfirm={async () => (await restoreAll(pending), location.assign('/'))} />}
@@ -160,6 +162,7 @@ function CloudCard() {
               void run(async () => {
                 await verifyLoginCode(email, code)
                 setUser(await currentUser())
+                window.dispatchEvent(new Event('memora-sync'))
               })
           }}
         >
@@ -195,6 +198,7 @@ function CloudCard() {
       <p>
         Entraste como <strong>{user.email}</strong>.
       </p>
+      <p className="muted">🔄 Sincronización automática activada: entra con este mismo correo en tu celular y en tu computadora, y tus cuadernos, juegos y avances pasarán solos de uno a otro.</p>
       <p className="muted">{synced ? `Última copia en la nube: ${when(synced)}.` : 'Todavía no has subido ninguna copia.'}</p>
       <div className="card-actions">
         <button
