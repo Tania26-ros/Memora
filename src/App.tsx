@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
+import CloudSync from './components/CloudSync'
 import InstallButton from './components/InstallButton'
 import StatsChips from './components/StatsChips'
 import StorageInfo from './components/StorageInfo'
@@ -48,6 +49,7 @@ export default function App() {
       </header>
 
       <main className="content">
+        <CloudSync />
         <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<HomePage />} />
