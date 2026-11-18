@@ -67,7 +67,9 @@ function FileBackupCard() {
         </button>
         <label className="btn btn-small btn-ghost">
           ⬆ Restaurar copia
-          <input type="file" accept="application/json,.json" hidden onChange={(e) => void pick(e.target.files?.[0])} />
+          {/* Sin filtro de tipo: en Android, la copia recibida por WhatsApp, Drive o correo
+              a veces llega como «archivo genérico» y el filtro la escondía. Se revisa al abrirla. */}
+          <input type="file" hidden onChange={(e) => (void pick(e.target.files?.[0]), (e.target.value = ''))} />
         </label>
       </div>
       {pending && <ConfirmRestore backup={pending} onCancel={() => setPending(null)} onConfirm={async () => (await restoreAll(pending), location.assign('/'))} />}
